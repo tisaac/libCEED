@@ -193,8 +193,8 @@ int main(int argc, char **argv) {
   // ---------------------------------------------------------------------------
   // Compute pointwise L2 maximum error
   // ---------------------------------------------------------------------------
-  CeedScalar max_error;
-  ierr = ComputeErrorMax(user, U_g, target, &max_error); CHKERRQ(ierr);
+  CeedScalar l2_error;
+  ierr = ComputeError(user, U_g, target, &l2_error); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Compute L2 error of projected solution into H(div) space
@@ -239,10 +239,10 @@ int main(int argc, char **argv) {
                      "    KSP Convergence                     : %s\n"
                      "    Total KSP Iterations                : %D\n"
                      "    Final rnorm                         : %e\n"
-                     "    Pointwise Error (max)               : %e\n"
+                     "    L2 Error                            : %e\n"
                      "    H(div) Projected Error              : %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,
-                     (double)rnorm, (double)max_error,
+                     (double)rnorm, (double)l2_error,
                      (double)proj_error); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------

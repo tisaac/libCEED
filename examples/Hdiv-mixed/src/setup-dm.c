@@ -7,7 +7,7 @@ PetscErrorCode CreateDistributedDM(MPI_Comm comm, DM *dm) {
   PetscErrorCode  ierr;
   PetscSection   sec;
   PetscBool      interpolate = PETSC_TRUE;
-  PetscInt       nx = 2, ny = 2;
+  PetscInt       nx = 2, ny = 1;
   PetscInt       faces[2] = {nx, ny};
   PetscInt       dim = 2, dofs_per_face;
   PetscInt       p_start, p_end;

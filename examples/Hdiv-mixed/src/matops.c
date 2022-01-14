@@ -87,7 +87,9 @@ PetscErrorCode ComputeError(User user, Vec X, CeedVector target,
   ierr = VecRestoreArrayReadAndMemType(user->X_loc, (const PetscScalar **)&x);
   CHKERRQ(ierr);
 
-  CeedVectorNorm(collocated_error, CEED_NORM_2, l2_error);
+  CeedScalar error;
+  CeedVectorNorm(collocated_error, CEED_NORM_1, &error);
+  *l2_error = sqrt(error);
   // Cleanup
   CeedVectorDestroy(&collocated_error);
 
