@@ -684,13 +684,14 @@ int CeedBasisCreateH1(Ceed ceed, CeedElemTopology topo, CeedInt num_comp,
                              q_weight, *basis); CeedChk(ierr);
   return CEED_ERROR_SUCCESS;
 }
+
 /**
   @brief Create a basis for H(div) discretizations
 
   @param ceed        A Ceed object where the CeedBasis will be created
   @param topo        Topology of element, e.g. hypercube, simplex, ect
   @param num_comp    Number of componenet, we have 1 vector componenet in H(div)
-  @param num_nodes   Total number of nodes
+  @param num_nodes   Total number of
   @param num_qpts    Total number of quadrature points
   @param basis_space 2 for H(div) discretization (1 for H^1, 3 for H(curl))
   @param interp      Row-major (dim*num_qpts * num_nodes*dim) matrix expressing the values of
@@ -1217,6 +1218,9 @@ int CeedBasisGetInterp(CeedBasis basis, const CeedScalar **interp) {
     *interp = basis->interp;
     break;
   case 2: // H(div) discretization
+    *interp = basis->interp;
+    break;
+  case 0: // L2 discretization
     *interp = basis->interp;
     break;
   }

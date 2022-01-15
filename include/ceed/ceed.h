@@ -554,6 +554,12 @@ CEED_EXTERN int CeedBasisCreateHdiv(Ceed ceed, CeedElemTopology topo,
                                     const CeedScalar *div,
                                     const CeedScalar *q_ref,
                                     const CeedScalar *q_weights, CeedBasis *basis);
+CEED_EXTERN int CeedBasisCreateL2(Ceed ceed, CeedElemTopology topo,
+                                  CeedInt num_comp,
+                                  CeedInt num_nodes, CeedInt nqpts,
+                                  const CeedScalar *interp,
+                                  const CeedScalar *q_ref,
+                                  const CeedScalar *q_weights, CeedBasis *basis);
 CEED_EXTERN int CeedBasisReferenceCopy(CeedBasis basis, CeedBasis *basis_copy);
 CEED_EXTERN int CeedBasisView(CeedBasis basis, FILE *stream);
 CEED_EXTERN int CeedBasisHdivView(CeedBasis basis, FILE *stream);
