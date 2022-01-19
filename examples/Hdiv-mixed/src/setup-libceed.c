@@ -1,6 +1,7 @@
 #include "../include/setup-libceed.h"
 #include "../include/petsc-macros.h"
-#include "../basis/quad.h"
+#include "../basis/H(div)-quad.h"
+#include "../basis/L2-P0.h"
 
 // -----------------------------------------------------------------------------
 // Convert PETSc MemType to libCEED MemType
@@ -22,11 +23,12 @@ PetscErrorCode CeedDataDestroy(CeedData ceed_data) {
   // Restrictions
   CeedElemRestrictionDestroy(&ceed_data->elem_restr_x);
   CeedElemRestrictionDestroy(&ceed_data->elem_restr_u);
-  CeedElemRestrictionDestroy(&ceed_data->elem_restr_u_i);
+  CeedElemRestrictionDestroy(&ceed_data->elem_restr_U_i);
   CeedElemRestrictionDestroy(&ceed_data->elem_restr_p);
   // Bases
   CeedBasisDestroy(&ceed_data->basis_x);
   CeedBasisDestroy(&ceed_data->basis_u);
+  CeedBasisDestroy(&ceed_data->basis_p);
   // QFunctions
   CeedQFunctionDestroy(&ceed_data->qf_residual);
   CeedQFunctionDestroy(&ceed_data->qf_error);
@@ -264,7 +266,7 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   // Number of quadratures in 1D, q_extra is set in cl-options.c
   CeedInt       Q = P + 1 + app_ctx->q_extra;
   CeedInt       num_qpts = Q*Q; // Number of quadratures per element
-  CeedInt       dim, num_comp_x, num_comp_u;
+  CeedInt       dim, num_comp_x, num_comp_u, num_comp_p;
   CeedInt       elem_node = problem_data->elem_node;
   DM            dm_coord;
   Vec           coords;
@@ -280,13 +282,21 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   // ---------------------------------------------------------------------------
   ierr = DMGetDimension(dm, &dim); CHKERRQ(ierr);
   num_comp_x = dim;
-  num_comp_u = 1;   // one vector dof
-  CeedInt       elem_dof = dim*elem_node; // dof per element
+  num_comp_u = 1;   // One vector dof
+  num_comp_p = 1;   // One constant dof
+  // Velocity dof per element (each face 2 dofs)
+  CeedInt       elem_dof_u = dim*elem_node;
+  // Pressure dof per element (one per element)
+  CeedInt       elem_dof_p = 1;
   CeedScalar    q_ref[dim*num_qpts], q_weights[num_qpts];
-  CeedScalar    div[elem_dof*num_qpts], interp[dim*elem_dof*num_qpts];
-  QuadBasis(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
+  CeedScalar    div[elem_dof_u*num_qpts], interp_u[dim*elem_dof_u*num_qpts],
+                interp_p[elem_dof_p*num_qpts];
+  HdivBasisQuad(Q, q_ref, q_weights, interp_u, div, problem_data->quadrature_mode);
+  L2BasisP0(Q, q_ref, q_weights, interp_p, problem_data->quadrature_mode);
   CeedBasisCreateHdiv(ceed, CEED_QUAD, num_comp_u, elem_node, num_qpts,
-                      interp, div, q_ref, q_weights, &ceed_data->basis_u);
+                      interp_u, div, q_ref, q_weights, &ceed_data->basis_u);
+  CeedBasisCreateL2(ceed, CEED_QUAD, num_comp_p, 1, num_qpts, interp_p,
+                    q_ref,q_weights, &ceed_data->basis_p);
   CeedBasisCreateTensorH1Lagrange(ceed, dim, num_comp_x, 2, Q,
                                   problem_data->quadrature_mode, &ceed_data->basis_x);
 
@@ -309,10 +319,9 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   ierr = DMPlexGetHeightStratum(dm, 0, &c_start, &c_end); CHKERRQ(ierr);
   num_elem = c_end - c_start;
 
-  CeedElemRestrictionCreateStrided(ceed, num_elem, num_qpts, dim,
-                                   dim*num_elem*num_qpts,
-                                   CEED_STRIDES_BACKEND, &ceed_data->elem_restr_u_i);
-
+  CeedElemRestrictionCreateStrided(ceed, num_elem, num_qpts, (dim+1),
+                                   (dim+1)*num_elem*num_qpts,
+                                   CEED_STRIDES_BACKEND, &ceed_data->elem_restr_U_i);
   // ---------------------------------------------------------------------------
   // Element coordinates
   // ---------------------------------------------------------------------------
@@ -327,15 +336,16 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   // ---------------------------------------------------------------------------
   // Setup RHS and true solution
   // ---------------------------------------------------------------------------
-  CeedVectorCreate(ceed, num_elem*num_qpts*dim, target);
+  CeedVectorCreate(ceed, num_elem*num_qpts*(dim+1), target);
   // Create the q-function that sets up the RHS and true solution
   CeedQFunctionCreateInterior(ceed, 1, problem_data->setup_rhs,
                               problem_data->setup_rhs_loc, &qf_setup_rhs);
   CeedQFunctionAddInput(qf_setup_rhs, "x", num_comp_x, CEED_EVAL_INTERP);
   CeedQFunctionAddInput(qf_setup_rhs, "weight", 1, CEED_EVAL_WEIGHT);
   CeedQFunctionAddInput(qf_setup_rhs, "dx", dim*dim, CEED_EVAL_GRAD);
-  CeedQFunctionAddOutput(qf_setup_rhs, "true_soln", dim, CEED_EVAL_NONE);
-  CeedQFunctionAddOutput(qf_setup_rhs, "rhs", dim, CEED_EVAL_INTERP);
+  CeedQFunctionAddOutput(qf_setup_rhs, "rhs_u", dim, CEED_EVAL_INTERP);
+  CeedQFunctionAddOutput(qf_setup_rhs, "rhs_p", 1, CEED_EVAL_INTERP);
+  CeedQFunctionAddOutput(qf_setup_rhs, "true_soln", dim+1, CEED_EVAL_NONE);
   // Create the operator that builds the RHS and true solution
   CeedOperatorCreate(ceed, qf_setup_rhs, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE,
                      &op_setup_rhs);
@@ -345,14 +355,14 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                        ceed_data->basis_x, CEED_VECTOR_NONE);
   CeedOperatorSetField(op_setup_rhs, "dx", ceed_data->elem_restr_x,
                        ceed_data->basis_x, CEED_VECTOR_ACTIVE);
-  CeedOperatorSetField(op_setup_rhs, "true_soln", ceed_data->elem_restr_u_i,
-                       CEED_BASIS_COLLOCATED, *target);
-  CeedOperatorSetField(op_setup_rhs, "rhs", ceed_data->elem_restr_u,
+  CeedOperatorSetField(op_setup_rhs, "rhs_u", ceed_data->elem_restr_u,
                        ceed_data->basis_u, CEED_VECTOR_ACTIVE);
-
+  CeedOperatorSetField(op_setup_rhs, "rhs_p", ceed_data->elem_restr_p,
+                       ceed_data->basis_p, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_setup_rhs, "true_soln", ceed_data->elem_restr_U_i,
+                       CEED_BASIS_COLLOCATED, *target);
   // Setup RHS and true solution
   CeedOperatorApply(op_setup_rhs, x_coord, rhs_ceed, CEED_REQUEST_IMMEDIATE);
-
 
   // ---------------------------------------------------------------------------
   // Persistent libCEED vectors
@@ -371,8 +381,11 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   CeedQFunctionAddInput(qf_residual, "weight", 1, CEED_EVAL_WEIGHT);
   CeedQFunctionAddInput(qf_residual, "dx", dim*dim, CEED_EVAL_GRAD);
   CeedQFunctionAddInput(qf_residual, "u", dim, CEED_EVAL_INTERP);
+  CeedQFunctionAddInput(qf_residual, "div_u", 1, CEED_EVAL_DIV);
+  CeedQFunctionAddInput(qf_residual, "p", 1, CEED_EVAL_INTERP);
   CeedQFunctionAddOutput(qf_residual, "v", dim, CEED_EVAL_INTERP);
-
+  CeedQFunctionAddOutput(qf_residual, "div_v", 1, CEED_EVAL_DIV);
+  CeedQFunctionAddOutput(qf_residual, "q", 1, CEED_EVAL_INTERP);
   // -- Operator
   CeedOperatorCreate(ceed, qf_residual, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE,
                      &op_residual);
@@ -382,9 +395,16 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                        ceed_data->basis_x, x_coord);
   CeedOperatorSetField(op_residual, "u", ceed_data->elem_restr_u,
                        ceed_data->basis_u, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_residual, "div_u", ceed_data->elem_restr_u,
+                       ceed_data->basis_u, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_residual, "p", ceed_data->elem_restr_p,
+                       ceed_data->basis_p, CEED_VECTOR_ACTIVE);
   CeedOperatorSetField(op_residual, "v", ceed_data->elem_restr_u,
                        ceed_data->basis_u, CEED_VECTOR_ACTIVE);
-
+  CeedOperatorSetField(op_residual, "div_v", ceed_data->elem_restr_u,
+                       ceed_data->basis_u, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_residual, "q", ceed_data->elem_restr_p,
+                       ceed_data->basis_p, CEED_VECTOR_ACTIVE);
   // -- Save libCEED data to apply operator in matops.c
   ceed_data->qf_residual = qf_residual;
   ceed_data->op_residual = op_residual;
@@ -395,23 +415,26 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   // Create the q-function that sets up the error
   CeedQFunctionCreateInterior(ceed, 1, problem_data->setup_error,
                               problem_data->setup_error_loc, &qf_error);
+  CeedQFunctionAddInput(qf_error, "weight", 1, CEED_EVAL_WEIGHT);
   CeedQFunctionAddInput(qf_error, "dx", dim*dim, CEED_EVAL_GRAD);
   CeedQFunctionAddInput(qf_error, "u", dim, CEED_EVAL_INTERP);
-  CeedQFunctionAddInput(qf_error, "true_soln", dim, CEED_EVAL_NONE);
-  CeedQFunctionAddInput(qf_error, "weight", 1, CEED_EVAL_WEIGHT);
-  CeedQFunctionAddOutput(qf_error, "error", dim, CEED_EVAL_NONE);
+  CeedQFunctionAddInput(qf_error, "p", 1, CEED_EVAL_INTERP);
+  CeedQFunctionAddInput(qf_error, "true_soln", dim+1, CEED_EVAL_NONE);
+  CeedQFunctionAddOutput(qf_error, "error", dim+1, CEED_EVAL_NONE);
   // Create the operator that builds the error
   CeedOperatorCreate(ceed, qf_error, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE,
                      &op_error);
+  CeedOperatorSetField(op_error, "weight", CEED_ELEMRESTRICTION_NONE,
+                       ceed_data->basis_x, CEED_VECTOR_NONE);
   CeedOperatorSetField(op_error, "dx", ceed_data->elem_restr_x,
                        ceed_data->basis_x, x_coord);
   CeedOperatorSetField(op_error, "u", ceed_data->elem_restr_u,
                        ceed_data->basis_u, CEED_VECTOR_ACTIVE);
-  CeedOperatorSetField(op_error, "true_soln", ceed_data->elem_restr_u_i,
+  CeedOperatorSetField(op_error, "p", ceed_data->elem_restr_p,
+                       ceed_data->basis_p, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_error, "true_soln", ceed_data->elem_restr_U_i,
                        CEED_BASIS_COLLOCATED, *target);
-  CeedOperatorSetField(op_error, "weight", CEED_ELEMRESTRICTION_NONE,
-                       ceed_data->basis_x, CEED_VECTOR_NONE);
-  CeedOperatorSetField(op_error, "error", ceed_data->elem_restr_u_i,
+  CeedOperatorSetField(op_error, "error", ceed_data->elem_restr_U_i,
                        CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
   // -- Save libCEED data to apply operator in matops.c
   ceed_data->qf_error = qf_error;
@@ -430,7 +453,9 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                               problem_data->setup_true_loc, &qf_true);
   CeedQFunctionAddInput(qf_true, "x", num_comp_x, CEED_EVAL_INTERP);
   CeedQFunctionAddInput(qf_true, "dx", dim*dim, CEED_EVAL_GRAD);
-  CeedQFunctionAddOutput(qf_true, "true_soln_Hdiv", dim, CEED_EVAL_NONE);
+  CeedQFunctionAddOutput(qf_true, "true_u", dim, CEED_EVAL_NONE);
+  //CeedQFunctionAddOutput(qf_true, "true_p", 1, CEED_EVAL_NONE);
+
   // Create the operator that builds the true solution in H(div) space
   CeedOperatorCreate(ceed, qf_true, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE,
                      &op_true);
@@ -438,32 +463,16 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                        basis_true, CEED_VECTOR_ACTIVE);
   CeedOperatorSetField(op_true, "dx", ceed_data->elem_restr_x,
                        basis_true, x_coord);
-  CeedOperatorSetField(op_true, "true_soln_Hdiv", ceed_data->elem_restr_u,
+  CeedOperatorSetField(op_true, "true_u", ceed_data->elem_restr_u,
                        CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
-
+  //CeedOperatorSetField(op_true, "true_p", ceed_data->elem_restr_p,
+  //                     CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
   CeedOperatorApply(op_true, x_coord, true_ceed, CEED_REQUEST_IMMEDIATE);
-
-  // -- Multiplicity calculation
-  CeedVector mult_vec;
-  CeedScalar *true_array;
-  const CeedScalar *mult_array;
-  CeedElemRestrictionCreateVector(ceed_data->elem_restr_u, &mult_vec,
-                                  NULL);
-  CeedElemRestrictionGetMultiplicity(ceed_data->elem_restr_u, mult_vec);
-
-  // -- Divide output of setup_true Qfunction by multiplicity vector
-  CeedVectorGetArray(true_ceed, CEED_MEM_HOST, &true_array);
-  CeedVectorGetArrayRead(mult_vec, CEED_MEM_HOST, &mult_array);
-  for (CeedInt i = 0; i < U_loc_size; i++)
-    true_array[i] /= mult_array[i];
-  CeedVectorRestoreArray(true_ceed, &true_array);
-  CeedVectorRestoreArrayRead(mult_vec, &mult_array);
 
   // Cleanup
   CeedBasisDestroy(&basis_true);
   CeedQFunctionDestroy(&qf_true);
   CeedOperatorDestroy(&op_true);
-  CeedVectorDestroy(&mult_vec);
 
   CeedQFunctionDestroy(&qf_setup_rhs);
   CeedOperatorDestroy(&op_setup_rhs);

@@ -136,6 +136,7 @@ int main(int argc, char **argv) {
   ierr = VecGetArrayAndMemType(rhs_loc, &r, &mem_type); CHKERRQ(ierr);
   CeedVectorCreate(ceed, U_l_size, &rhs_ceed);
   CeedVectorSetArray(rhs_ceed, MemTypeP2C(mem_type), CEED_USE_POINTER, r);
+  
   // Get projected true solution
   Vec true_loc;
   PetscScalar *t;
@@ -146,14 +147,13 @@ int main(int argc, char **argv) {
   ierr = VecGetArrayAndMemType(true_loc, &t, &t_mem_type); CHKERRQ(ierr);
   CeedVectorCreate(ceed, U_l_size, &true_ceed);
   CeedVectorSetArray(true_ceed, MemTypeP2C(t_mem_type), CEED_USE_POINTER, t);
-
   // ---------------------------------------------------------------------------
   // Setup libCEED
   // ---------------------------------------------------------------------------
   // -- Set up libCEED objects
   ierr = SetupLibceed(dm, ceed, app_ctx, problem_data, U_g_size,
-                      U_loc_size, ceed_data, rhs_ceed, &target, true_ceed); CHKERRQ(ierr);
-
+                      U_loc_size, ceed_data, rhs_ceed, &target, 
+                      true_ceed); CHKERRQ(ierr);
   // ---------------------------------------------------------------------------
   // Gather RHS
   // ---------------------------------------------------------------------------
@@ -174,6 +174,7 @@ int main(int argc, char **argv) {
   user->y_ceed = ceed_data->y_ceed;
   user->op_apply = ceed_data->op_residual;
   user->op_error = ceed_data->op_error;
+  user->elem_restr_u = ceed_data->elem_restr_u;
   user->ceed = ceed;
   // Operator
   Mat mat;
@@ -189,38 +190,20 @@ int main(int argc, char **argv) {
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
   ierr = KSPSetUp(ksp); CHKERRQ(ierr);
   ierr = KSPSolve(ksp, rhs, U_g); CHKERRQ(ierr);
-
+  //VecView(U_g, PETSC_VIEWER_STDOUT_WORLD);
   // ---------------------------------------------------------------------------
   // Compute pointwise L2 maximum error
   // ---------------------------------------------------------------------------
-  CeedScalar l2_error;
-  ierr = ComputeError(user, U_g, target, &l2_error); CHKERRQ(ierr);
+  CeedScalar l2_error_u, l2_error_p;
+  ierr = ComputeError(user, U_g, target,
+              &l2_error_u, &l2_error_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Compute L2 error of projected solution into H(div) space
   // ---------------------------------------------------------------------------
-  const CeedScalar *true_array;
-  Vec error_vec, true_vec;
-
-  // -- Work vectors
-  ierr = VecDuplicate(U_g, &error_vec); CHKERRQ(ierr);
-  ierr = VecSet(error_vec, 0.0); CHKERRQ(ierr);
-  ierr = VecDuplicate(U_g, &true_vec); CHKERRQ(ierr);
-  ierr = VecSet(true_vec, 0.0); CHKERRQ(ierr);
-
-  // -- Assemble global true solution vector
-  CeedVectorGetArrayRead(true_ceed, CEED_MEM_HOST, &true_array);
-  ierr = VecPlaceArray(user->Y_loc, (PetscScalar *)true_array);
-  CHKERRQ(ierr);
-  ierr = DMLocalToGlobal(user->dm, user->Y_loc, INSERT_VALUES, true_vec);
-  CHKERRQ(ierr);
-  ierr = VecResetArray(user->Y_loc); CHKERRQ(ierr);
-  CeedVectorRestoreArrayRead(true_ceed, &true_array);
-
-  // -- Compute H(div) projected error
-  CeedScalar proj_error;
-  ierr = VecWAXPY(error_vec, -1.0, U_g, true_vec); CHKERRQ(ierr);
-  ierr = VecNorm(error_vec, NORM_2, &proj_error); CHKERRQ(ierr);
+  CeedScalar l2_proj_u, l2_proj_p;
+  ierr = ComputeErrorProj(user, U_g, true_ceed,
+                          &l2_proj_u, &l2_proj_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Output results
@@ -239,11 +222,12 @@ int main(int argc, char **argv) {
                      "    KSP Convergence                     : %s\n"
                      "    Total KSP Iterations                : %D\n"
                      "    Final rnorm                         : %e\n"
-                     "    L2 Error                            : %e\n"
-                     "    H(div) Projected Error              : %e\n",
+                     "    L2 Error of u                       : %e\n"
+                     "    L2 Error of p                       : %e\n"
+                     "    L2 Error of projected ue into H(div): %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,
-                     (double)rnorm, (double)l2_error,
-                     (double)proj_error); CHKERRQ(ierr);
+                     (double)rnorm, (double)l2_error_u,
+                     (double)l2_error_p, (double)l2_proj_u); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Free objects
