@@ -22,6 +22,9 @@
 
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI    3.14159265358979323846
+#endif
 // -----------------------------------------------------------------------------
 // Strong form:
 //  u       = -\grad(p)
@@ -60,9 +63,9 @@ CEED_QFUNCTION(SetupRhs2D)(void *ctx, const CeedInt Q,
                                 {dxdX[0][1][i], dxdX[1][1][i]}};
     const CeedScalar detJ = J[1][1]*J[0][0] - J[1][0]*J[0][1];
     // *INDENT-ON*
-    CeedScalar pe = x*(1-x)*y*(1-y);
-    CeedScalar ue[2] = {-(1-2*x)*y*(1-y),-x*(1-x)*(1-2*y)};
-    CeedScalar f = 2*y*(1-y) + 2*x*(1-x);
+    CeedScalar pe = sin(M_PI*x) * sin(M_PI*y);
+    CeedScalar ue[2] = {-M_PI*cos(M_PI*x)*sin(M_PI*y), -M_PI*sin(M_PI*x)*cos(M_PI*y)};
+    CeedScalar f = 2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
     
     // 1st eq: component 1
     rhs_u[i+0*Q] = 0.;

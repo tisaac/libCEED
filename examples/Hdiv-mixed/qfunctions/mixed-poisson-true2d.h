@@ -27,7 +27,9 @@
 #define TRUE_H
 
 #include <math.h>
-
+#ifndef M_PI
+#define M_PI    3.14159265358979323846
+#endif
 // -----------------------------------------------------------------------------
 // Compuet true solution
 // -----------------------------------------------------------------------------
@@ -54,10 +56,14 @@ CEED_QFUNCTION(SetupTrueSoln2D)(void *ctx, const CeedInt Q,
   CeedScalar x1 = coords[1+0*Q], y1 = coords[1+1*Q];
   CeedScalar x2 = coords[2+0*Q], y2 = coords[2+1*Q];
   CeedScalar x3 = coords[3+0*Q], y3 = coords[3+1*Q];
-  CeedScalar ue0[2] = {-(1-2*x0)*y0*(1-y0), -x0*(1-x0)*(1-2*y0)};
-  CeedScalar ue1[2] = {-(1-2*x1)*y1*(1-y1), -x1*(1-x1)*(1-2*y1)};
-  CeedScalar ue2[2] = {-(1-2*x2)*y2*(1-y2), -x2*(1-x2)*(1-2*y2)};
-  CeedScalar ue3[2] = {-(1-2*x3)*y3*(1-y3), -x3*(1-x3)*(1-2*y3)};
+  CeedScalar ue0[2] = {-M_PI*cos(M_PI*x0)*sin(M_PI*y0),
+                       -M_PI*sin(M_PI*x0)*cos(M_PI*y0)};
+  CeedScalar ue1[2] = {-M_PI*cos(M_PI*x1)*sin(M_PI*y1),
+                       -M_PI*sin(M_PI*x1)*cos(M_PI*y1)};
+  CeedScalar ue2[2] = {-M_PI*cos(M_PI*x2)*sin(M_PI*y2),
+                       -M_PI*sin(M_PI*x2)*cos(M_PI*y2)};
+  CeedScalar ue3[2] = {-M_PI*cos(M_PI*x3)*sin(M_PI*y3),
+                       -M_PI*sin(M_PI*x3)*cos(M_PI*y3)};
   CeedScalar nl0[2] = {-J0[1][1],J0[0][1]};
   CeedScalar nb0[2] = {J0[1][0],-J0[0][0]};
   CeedScalar nr1[2] = {J1[1][1],-J1[0][1]};
