@@ -89,26 +89,41 @@ PetscErrorCode ComputeError(User user, Vec X, CeedVector target,
   CHKERRQ(ierr);
 
   // Compute L2 error for each field
-  CeedVector collocated_error_u, collocated_error_p;
-  CeedInt length_p, length_u, dim;
-  const CeedScalar *E_U; // to store total error; E_U=[e_p,e_u]
-
+  CeedInt c_start, c_end, dim, num_elem, num_qpts;
   ierr = DMGetDimension(user->dm, &dim); CHKERRQ(ierr);
-  length_p = length / (dim+1);
-  length_u = length - length_p;
+  ierr = DMPlexGetHeightStratum(user->dm, 0, &c_start, &c_end); CHKERRQ(ierr);
+  num_elem = c_end -c_start;
+  num_qpts = length / (num_elem*(dim+1));
+
+  CeedVector collocated_error_u, collocated_error_p;
+  const CeedScalar *E_U; // to store total error
+  CeedInt length_u, length_p;
+  length_p = num_elem*num_qpts;
+  length_u = num_elem*num_qpts*dim;
   CeedScalar e_u[length_u], e_p[length_p];
 
-  CeedVectorGetArrayRead(collocated_error, CEED_MEM_HOST, &E_U);
   CeedVectorCreate(user->ceed, length_p, &collocated_error_p);
-  for (CeedInt i=0; i<length_p; i++)
-    e_p[i] = E_U[i];
+  CeedVectorCreate(user->ceed, length_u, &collocated_error_u);
+  // E_U is ordered as [p_0,u_0/.../p_n,u_n] for 0 to n num_elem
+  // For each element p_0 size is num_qpts, and u_0 is dim*num_qpts
+  CeedVectorGetArrayRead(collocated_error, CEED_MEM_HOST, &E_U);
+  for (CeedInt n=0; n < num_elem; n++) {
+    for (CeedInt i=0; i < num_qpts; i++) {
+      CeedInt j = i + n*num_qpts;
+      CeedInt k = i + n*num_qpts*(dim+1);
+      e_p[j] = E_U[k];
+    }
+  }
+
+  for (CeedInt n=0; n < num_elem; n++) {
+    for (CeedInt i=0; i < dim*num_qpts; i++) {
+      CeedInt j = i + n*num_qpts*dim;
+      CeedInt k = num_qpts + i + n*num_qpts*(dim+1);
+      e_u[j] = E_U[k];
+    }
+  }
 
   CeedVectorSetArray(collocated_error_p, CEED_MEM_HOST, CEED_USE_POINTER, e_p);
-
-  CeedVectorCreate(user->ceed, length_u, &collocated_error_u);
-  for (CeedInt i=0; i<length_u; i++)
-    e_u[i] = E_U[length_p+i];
-
   CeedVectorSetArray(collocated_error_u, CEED_MEM_HOST, CEED_USE_POINTER, e_u);
   CeedVectorRestoreArrayRead(collocated_error, &E_U);
 

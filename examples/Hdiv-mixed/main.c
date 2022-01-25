@@ -225,11 +225,10 @@ int main(int argc, char **argv) {
                      "    Final rnorm                         : %e\n"
                      "    Total dof                           : %D\n"
                      "    L2 Error of u: %e"
-                     "    L2 Error of p: %e"
-                     "    L2 Error of u in H(div) space: %e\n",
+                     "    L2 Error of p: %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,
                      (double)rnorm, U_g_size, (double)l2_error_u,
-                     (double)l2_error_p, (double)l2_proj_u); CHKERRQ(ierr);
+                     (double)l2_error_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Free objects
