@@ -43,8 +43,8 @@
 //   rhs_p     : -(q, f) = -\int( q * f * w*detJ)dx
 // -----------------------------------------------------------------------------
 CEED_QFUNCTION(SetupRhs2D)(void *ctx, const CeedInt Q,
-                         const CeedScalar *const *in,
-                         CeedScalar *const *out) {
+                           const CeedScalar *const *in,
+                           CeedScalar *const *out) {
   // *INDENT-OFF*
   // Inputs
   const CeedScalar (*coords) = in[0],
@@ -64,9 +64,9 @@ CEED_QFUNCTION(SetupRhs2D)(void *ctx, const CeedInt Q,
     const CeedScalar detJ = J[1][1]*J[0][0] - J[1][0]*J[0][1];
     // *INDENT-ON*
     CeedScalar pe = sin(M_PI*x) * sin(M_PI*y);
-    CeedScalar ue[2] = {-M_PI*cos(M_PI*x)*sin(M_PI*y), -M_PI*sin(M_PI*x)*cos(M_PI*y)};
+    CeedScalar ue[2] = {-M_PI*cos(M_PI*x) *sin(M_PI*y), -M_PI*sin(M_PI*x) *cos(M_PI*y)};
     CeedScalar f = 2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
-    
+
     // 1st eq: component 1
     rhs_u[i+0*Q] = 0.;
     // 1st eq: component 2

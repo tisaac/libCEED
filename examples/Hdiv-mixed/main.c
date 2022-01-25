@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
   ierr = VecGetArrayAndMemType(rhs_loc, &r, &mem_type); CHKERRQ(ierr);
   CeedVectorCreate(ceed, U_l_size, &rhs_ceed);
   CeedVectorSetArray(rhs_ceed, MemTypeP2C(mem_type), CEED_USE_POINTER, r);
-  
+
   // Get projected true solution
   Vec true_loc;
   PetscScalar *t;
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   // ---------------------------------------------------------------------------
   // -- Set up libCEED objects
   ierr = SetupLibceed(dm, ceed, app_ctx, problem_data, U_g_size,
-                      U_loc_size, ceed_data, rhs_ceed, &target, 
+                      U_loc_size, ceed_data, rhs_ceed, &target,
                       true_ceed); CHKERRQ(ierr);
   //CeedVectorView(rhs_ceed, "%12.8f", stdout);
   // ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
   // ---------------------------------------------------------------------------
   CeedScalar l2_error_u, l2_error_p;
   ierr = ComputeError(user, U_g, target,
-              &l2_error_u, &l2_error_p); CHKERRQ(ierr);
+                      &l2_error_u, &l2_error_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Compute L2 error of projected solution into H(div) space
@@ -219,15 +219,13 @@ int main(int argc, char **argv) {
   ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,
                      "  KSP:\n"
-                     "    KSP Type                            : %s\n"
-                     "    KSP Convergence                     : %s\n"
-                     "    Total KSP Iterations                : %D\n"
-                     "    Final rnorm                         : %e\n"
-                     "    Total dof                           : %D\n"
-                     "    L2 Error of u: %e"
-                     "    L2 Error of p: %e\n",
+                     "    KSP Type                  : %s\n"
+                     "    KSP Convergence           : %s\n"
+                     "    Total KSP Iterations      : %D\n"
+                     "    Final rnorm               : %e\n"
+                     "    L2 Error of u and p       : %e, %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,
-                     (double)rnorm, U_g_size, (double)l2_error_u,
+                     (double)rnorm, (double)l2_error_u,
                      (double)l2_error_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------

@@ -154,6 +154,7 @@ int main(int argc, char **argv) {
   ierr = SetupLibceed(dm, ceed, app_ctx, problem_data, U_g_size,
                       U_loc_size, ceed_data, rhs_ceed, &target, true_ceed); CHKERRQ(ierr);
 
+  //CeedVectorView(true_ceed, "%12.8f", stdout);
   // ---------------------------------------------------------------------------
   // Gather RHS
   // ---------------------------------------------------------------------------
@@ -189,7 +190,7 @@ int main(int argc, char **argv) {
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
   ierr = KSPSetUp(ksp); CHKERRQ(ierr);
   ierr = KSPSolve(ksp, rhs, U_g); CHKERRQ(ierr);
-
+  //VecView(U_g, PETSC_VIEWER_STDOUT_WORLD);
   // ---------------------------------------------------------------------------
   // Compute pointwise L2 maximum error
   // ---------------------------------------------------------------------------
@@ -239,11 +240,9 @@ int main(int argc, char **argv) {
                      "    KSP Convergence                     : %s\n"
                      "    Total KSP Iterations                : %D\n"
                      "    Final rnorm                         : %e\n"
-                     "    L2 Error                            : %e\n"
-                     "    H(div) Projected Error              : %e\n",
+                     "    L2 Error                            : %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,
-                     (double)rnorm, (double)l2_error,
-                     (double)proj_error); CHKERRQ(ierr);
+                     (double)rnorm, (double)l2_error); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Free objects

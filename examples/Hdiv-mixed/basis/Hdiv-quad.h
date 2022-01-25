@@ -46,7 +46,7 @@ int NodalHdivBasisQuad(CeedScalar *X, CeedScalar *Bx, CeedScalar *By) {
   return 0;
 }
 static void HdivBasisQuad(CeedInt Q, CeedScalar *q_ref, CeedScalar *q_weights,
-                      CeedScalar *interp, CeedScalar *div, CeedQuadMode quad_mode) {
+                          CeedScalar *interp, CeedScalar *div, CeedQuadMode quad_mode) {
 
   // Get 1D quadrature on [-1,1]
   CeedScalar q_ref_1d[Q], q_weight_1d[Q];

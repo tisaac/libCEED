@@ -66,7 +66,7 @@ struct User_ {
 typedef struct {
   CeedQFunctionUser setup_rhs, residual, setup_error, setup_true;
   const char        *setup_rhs_loc, *residual_loc, *setup_error_loc,
-                    *setup_true_loc;
+        *setup_true_loc;
   CeedQuadMode      quadrature_mode;
   CeedInt           elem_node;
   PetscErrorCode    (*setup_ctx)(Ceed, CeedData, Physics);

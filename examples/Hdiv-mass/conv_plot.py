@@ -40,16 +40,12 @@ def plot():
     data = data.sort_values('run')
 
     E_u = data['error_u']
-    E_p = data['error_p']
     #E_hdiv = data['error_hdiv']
     h = 1/data['mesh_res']
-    H1 =  amin(E_p)* (h/amin(h)) # H = C h^1
     H2 =  amin(E_u)* (h/amin(h))**2  # H = C h^2
 
-    ax.loglog(h, E_p, 'o', color='blue', label='Pressure')
     ax.loglog(h, E_u, 'o', color='black', label = 'Velocity')
     #ax.loglog(h, E_hdiv, '*', color='red', label = 'Velocity in H(div)')
-    ax.loglog(h, H1, '--', color='blue', label='O(h)')
     ax.loglog(h, H2, '--', color='black', label='O(h$^2$)')
 
     ax.legend(loc='upper left')
@@ -58,7 +54,7 @@ def plot():
     ax.set_title('Convergence by h Refinement')
     #xlim(.06, .3)
     fig.tight_layout()
-    plt.savefig('convrate_mixed.png', bbox_inches='tight')
+    plt.savefig('convrate_mass.png', bbox_inches='tight')
     
 
 

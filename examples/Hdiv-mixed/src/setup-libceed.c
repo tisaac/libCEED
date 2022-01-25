@@ -1,6 +1,6 @@
 #include "../include/setup-libceed.h"
 #include "../include/petsc-macros.h"
-#include "../basis/H(div)-quad.h"
+#include "../basis/Hdiv-quad.h"
 #include "../basis/L2-P0.h"
 
 // -----------------------------------------------------------------------------
@@ -267,7 +267,6 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   CeedInt       Q = P + 1 + app_ctx->q_extra;
   CeedInt       num_qpts = Q*Q; // Number of quadratures per element
   CeedInt       dim, num_comp_x, num_comp_u, num_comp_p;
-  CeedInt       elem_node = problem_data->elem_node;
   DM            dm_coord;
   Vec           coords;
   PetscInt      c_start, c_end, num_elem;
@@ -284,19 +283,18 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   num_comp_x = dim;
   num_comp_u = 1;   // One vector dof
   num_comp_p = 1;   // One constant dof
-  // Velocity dof per element (each face 2 dofs)
-  CeedInt       elem_dof_u = dim*elem_node;
-  // Pressure dof per element (one per element)
-  CeedInt       elem_dof_p = 1;
+  // Pressure and velocity dof per element
+  CeedInt       P_p = 1, P_u = dim*PetscPowInt(P, dim);
   CeedScalar    q_ref[dim*num_qpts], q_weights[num_qpts];
-  CeedScalar    div[elem_dof_u*num_qpts], interp_u[dim*elem_dof_u*num_qpts],
-                interp_p[elem_dof_p*num_qpts];
-  HdivBasisQuad(Q, q_ref, q_weights, interp_u, div, problem_data->quadrature_mode);
+  CeedScalar    div[P_u*num_qpts], interp_u[dim*P_u*num_qpts],
+                interp_p[P_p*num_qpts], *grad=NULL;
+  HdivBasisQuad(Q, q_ref, q_weights, interp_u, div,
+                problem_data->quadrature_mode);
   L2BasisP0(Q, q_ref, q_weights, interp_p, problem_data->quadrature_mode);
-  CeedBasisCreateHdiv(ceed, CEED_QUAD, num_comp_u, elem_node, num_qpts,
+  CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, P_u, num_qpts,
                       interp_u, div, q_ref, q_weights, &ceed_data->basis_u);
-  CeedBasisCreateL2(ceed, CEED_QUAD, num_comp_p, 1, num_qpts, interp_p,
-                    q_ref,q_weights, &ceed_data->basis_p);
+  CeedBasisCreateH1(ceed, CEED_TOPOLOGY_QUAD, num_comp_p, 1, num_qpts, interp_p,
+                    grad, q_ref,q_weights, &ceed_data->basis_p);
   CeedBasisCreateTensorH1Lagrange(ceed, dim, num_comp_x, 2, Q,
                                   problem_data->quadrature_mode, &ceed_data->basis_x);
 

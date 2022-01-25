@@ -94,23 +94,22 @@ PetscErrorCode ComputeError(User user, Vec X, CeedVector target,
   ierr = DMPlexGetHeightStratum(user->dm, 0, &c_start, &c_end); CHKERRQ(ierr);
   num_elem = c_end -c_start;
   num_qpts = length / (num_elem*(dim+1));
-
+  CeedInt cent_qpts = num_qpts / 2;
   CeedVector collocated_error_u, collocated_error_p;
   const CeedScalar *E_U; // to store total error
   CeedInt length_u, length_p;
-  length_p = num_elem*num_qpts;
+  length_p = num_elem;
   length_u = num_elem*num_qpts*dim;
   CeedScalar e_u[length_u], e_p[length_p];
-
   CeedVectorCreate(user->ceed, length_p, &collocated_error_p);
   CeedVectorCreate(user->ceed, length_u, &collocated_error_u);
   // E_U is ordered as [p_0,u_0/.../p_n,u_n] for 0 to n num_elem
   // For each element p_0 size is num_qpts, and u_0 is dim*num_qpts
   CeedVectorGetArrayRead(collocated_error, CEED_MEM_HOST, &E_U);
   for (CeedInt n=0; n < num_elem; n++) {
-    for (CeedInt i=0; i < num_qpts; i++) {
-      CeedInt j = i + n*num_qpts;
-      CeedInt k = i + n*num_qpts*(dim+1);
+    for (CeedInt i=0; i < 1; i++) {
+      CeedInt j = i + n*1;
+      CeedInt k = cent_qpts + n*num_qpts*(dim+1);
       e_p[j] = E_U[k];
     }
   }
@@ -156,7 +155,7 @@ PetscErrorCode ComputeErrorProj(User user, Vec X, CeedVector true_ceed,
   // Setup CEED vector
   ierr = VecGetArrayAndMemType(user->X_loc, &x, &mem_type); CHKERRQ(ierr);
   CeedVectorSetArray(user->x_ceed, MemTypeP2C(mem_type), CEED_USE_POINTER, x);
- 
+
   // -- Multiplicity calculation
   CeedVector mult_vec;
   CeedScalar *true_array, *soln;

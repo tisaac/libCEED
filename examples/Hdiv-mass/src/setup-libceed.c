@@ -1,6 +1,6 @@
 #include "../include/setup-libceed.h"
 #include "../include/petsc-macros.h"
-#include "../basis/quad.h"
+#include "../basis/Hdiv-quad.h"
 
 // -----------------------------------------------------------------------------
 // Convert PETSc MemType to libCEED MemType
@@ -276,8 +276,8 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   CeedInt       elem_dof = dim*elem_node; // dof per element
   CeedScalar    q_ref[dim*num_qpts], q_weights[num_qpts];
   CeedScalar    div[elem_dof*num_qpts], interp[dim*elem_dof*num_qpts];
-  QuadBasis(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
-  CeedBasisCreateHdiv(ceed, CEED_QUAD, num_comp_u, elem_node, num_qpts,
+  HdivBasisQuad(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
+  CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, elem_dof, num_qpts,
                       interp, div, q_ref, q_weights, &ceed_data->basis_u);
   CeedBasisCreateTensorH1Lagrange(ceed, dim, num_comp_x, 2, Q,
                                   problem_data->quadrature_mode, &ceed_data->basis_x);

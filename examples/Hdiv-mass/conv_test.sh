@@ -23,11 +23,11 @@ declare -A run_flags
 declare -A test_flags
     test_flags[res_start]=2
     test_flags[res_stride]=2
-    test_flags[res_end]=12
+    test_flags[res_end]=10
 
 file_name=conv_test_result.csv
 
-echo "run,mesh_res,error_u,error_p" > $file_name
+echo "run,mesh_res,error_u" > $file_name
 
 i=0
 
@@ -39,7 +39,7 @@ for ((res=${test_flags[res_start]}; res<=${test_flags[res_end]}; res+=${test_fla
             args="$args -$arg ${run_flags[$arg]}"
         fi
     done
-    ./main $args | grep "L2 Error of u and p" | awk -v i="$i" -v res="$res" '{ printf "%d,%d,%.5f,%.5f\n", i, res, $8, $9}' >> $file_name
+    ./main $args | grep "L2 Error" | awk -v i="$i" -v res="$res" '{ printf "%d,%d,%.5f\n", i, res, $4}' >> $file_name
     i=$((i+1))
 done
 

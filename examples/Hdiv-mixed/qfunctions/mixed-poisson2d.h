@@ -44,8 +44,9 @@
 // Note we need to apply Piola map on the basis_u, which is J*u/detJ
 // So (v,u) = \int (v^T * u detJ*w) ==> \int (v^T J^T*J*u*w/detJ)
 // -----------------------------------------------------------------------------
-CEED_QFUNCTION(SetupMixedPoisson2D)(void *ctx, CeedInt Q, const CeedScalar *const *in,
-                          CeedScalar *const *out) {
+CEED_QFUNCTION(SetupMixedPoisson2D)(void *ctx, CeedInt Q,
+                                    const CeedScalar *const *in,
+                                    CeedScalar *const *out) {
   // *INDENT-OFF*
   // Inputs
   const CeedScalar (*w) = in[0],
