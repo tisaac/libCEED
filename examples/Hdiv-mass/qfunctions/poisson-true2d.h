@@ -23,8 +23,8 @@
 //  d6|         |d2
 //    0---------1
 //     d0     d1
-#ifndef TRUE_H
-#define TRUE_H
+#ifndef TRUE2D_H
+#define TRUE2D_H
 
 #include <math.h>
 
@@ -89,4 +89,4 @@ CEED_QFUNCTION(SetupTrueSoln2D)(void *ctx, const CeedInt Q,
 }
 // -----------------------------------------------------------------------------
 
-#endif // End TRUE_H
+#endif // End TRUE2D_H

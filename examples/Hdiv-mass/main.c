@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   // PETSc objects
   DM             dm;
   VecType        vec_type;
-  ierr = CreateDistributedDM(comm, &dm); CHKERRQ(ierr);
+  ierr = CreateDistributedDM(comm, problem_data, &dm); CHKERRQ(ierr);
   ierr = DMGetVecType(dm, &vec_type); CHKERRQ(ierr);
   if (!vec_type) { // Not yet set by user -dm_vec_type
     switch (mem_type_backend) {
@@ -154,7 +154,6 @@ int main(int argc, char **argv) {
   ierr = SetupLibceed(dm, ceed, app_ctx, problem_data, U_g_size,
                       U_loc_size, ceed_data, rhs_ceed, &target, true_ceed); CHKERRQ(ierr);
 
-  //CeedVectorView(true_ceed, "%12.8f", stdout);
   // ---------------------------------------------------------------------------
   // Gather RHS
   // ---------------------------------------------------------------------------
@@ -164,6 +163,8 @@ int main(int argc, char **argv) {
   ierr = VecDuplicate(U_g, &rhs); CHKERRQ(ierr);
   ierr = VecZeroEntries(rhs); CHKERRQ(ierr);
   ierr = DMLocalToGlobal(dm, rhs_loc, ADD_VALUES, rhs); CHKERRQ(ierr);
+  //VecView(rhs, PETSC_VIEWER_STDOUT_WORLD);
+
   // ---------------------------------------------------------------------------
   // Setup Mat, KSP
   // ---------------------------------------------------------------------------
@@ -190,6 +191,7 @@ int main(int argc, char **argv) {
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
   ierr = KSPSetUp(ksp); CHKERRQ(ierr);
   ierr = KSPSolve(ksp, rhs, U_g); CHKERRQ(ierr);
+  printf("U_g\n");
   //VecView(U_g, PETSC_VIEWER_STDOUT_WORLD);
   // ---------------------------------------------------------------------------
   // Compute pointwise L2 maximum error

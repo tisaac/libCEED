@@ -36,12 +36,13 @@ PetscErrorCode Hdiv_POISSON_MASS2D(ProblemData *problem_data, void *ctx) {
   // ------------------------------------------------------
   //               SET UP POISSON_QUAD2D
   // ------------------------------------------------------
+  problem_data->dim                     = 2;
   problem_data->elem_node               = 4;
   problem_data->quadrature_mode         = CEED_GAUSS;
-  problem_data->setup_rhs               = SetupRhs;
-  problem_data->setup_rhs_loc           = SetupRhs_loc;
-  problem_data->residual                = SetupMass;
-  problem_data->residual_loc            = SetupMass_loc;
+  problem_data->setup_rhs               = SetupRhs2D;
+  problem_data->setup_rhs_loc           = SetupRhs2D_loc;
+  problem_data->residual                = SetupMass2D;
+  problem_data->residual_loc            = SetupMass2D_loc;
   problem_data->setup_error             = SetupError2D;
   problem_data->setup_error_loc         = SetupError2D_loc;
   problem_data->setup_true              = SetupTrueSoln2D;
@@ -49,7 +50,7 @@ PetscErrorCode Hdiv_POISSON_MASS2D(ProblemData *problem_data, void *ctx) {
   // ------------------------------------------------------
   //              Command line Options
   // ------------------------------------------------------
-  ierr = PetscOptionsBegin(comm, NULL, "Options for DENSITY_CURRENT problem",
+  ierr = PetscOptionsBegin(comm, NULL, "Options for Hdiv-mass problem",
                            NULL); CHKERRQ(ierr);
 
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);

@@ -26,9 +26,11 @@ PetscErrorCode RegisterProblems_Hdiv(AppCtx app_ctx) {
   PetscErrorCode   ierr;
   PetscFunctionBeginUser;
   // 1) poisson-quad2d (Hdiv_POISSON_MASS2D is created in poisson-mass2d.c)
-  ierr = PetscFunctionListAdd(&app_ctx->problems, "poisson_mass2d",
+  ierr = PetscFunctionListAdd(&app_ctx->problems, "mass2d",
                               Hdiv_POISSON_MASS2D); CHKERRQ(ierr);
   // 2) poisson-hex3d
+  ierr = PetscFunctionListAdd(&app_ctx->problems, "mass3d",
+                              Hdiv_POISSON_MASS3D); CHKERRQ(ierr);
 
   // 3) poisson-prism3d
 
@@ -63,7 +65,7 @@ PetscErrorCode ProcessCommandLineOptions(MPI_Comm comm, AppCtx app_ctx) {
 
   // Provide default problem if not specified
   if (!problem_flag) {
-    const char *problem_name = "poisson_mass2d";
+    const char *problem_name = "mass2d";
     strncpy(app_ctx->problem_name, problem_name, 16);
   }
 

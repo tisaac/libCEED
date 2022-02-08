@@ -1,6 +1,7 @@
 #include "../include/setup-libceed.h"
 #include "../include/petsc-macros.h"
 #include "../basis/Hdiv-quad.h"
+#include "../basis/Hdiv-hex.h"
 
 // -----------------------------------------------------------------------------
 // Convert PETSc MemType to libCEED MemType
@@ -203,16 +204,18 @@ PetscErrorCode CreateRestrictionFromPlexOriented(Ceed ceed, DM dm,
   ierr = PetscMalloc1(num_elem*dim*PetscPowInt(P, dim), &orient_indices);
   CHKERRQ(ierr);
   for (p = 0, elem_offset = 0; p < num_elem; p++) {
-    PetscInt num_indices, *indices;
+    PetscInt num_indices, *indices, faces_per_elem, dofs_per_face;
     ierr = DMPlexGetClosureIndices(dm, section, section, p, PETSC_TRUE,
                                    &num_indices, &indices, NULL, NULL);
     CHKERRQ(ierr);
 
     ierr = DMPlexGetConeOrientation(dm, p, &ornt); CHKERRQ(ierr);
-
-    for (PetscInt e = 0; e < 4; e++) { // number of face/element
-      for (PetscInt i = 0; i < 2; i++) { // number of dof/face
-        PetscInt ii = 2*e + i;
+    // Get number of faces per element
+    ierr = DMPlexGetConeSize(dm, p, &faces_per_elem); CHKERRQ(ierr);
+    dofs_per_face = faces_per_elem - 2;
+    for (PetscInt e = 0; e < faces_per_elem; e++) {
+      for (PetscInt i = 0; i < dofs_per_face; i++) {
+        PetscInt ii = dofs_per_face*e + i;
         // Essential boundary conditions are encoded as -(loc+1), but we don't care so we decode.
         PetscInt loc = Involute(indices[ii*num_comp[0]]);
         restr_indices[elem_offset] = loc;
@@ -255,9 +258,8 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   CeedInt       P = app_ctx->degree + 1;
   // Number of quadratures in 1D, q_extra is set in cl-options.c
   CeedInt       Q = P + 1 + app_ctx->q_extra;
-  CeedInt       num_qpts = Q*Q; // Number of quadratures per element
   CeedInt       dim, num_comp_x, num_comp_u;
-  CeedInt       elem_node = problem_data->elem_node;
+  //CeedInt       elem_node = problem_data->elem_node;
   DM            dm_coord;
   Vec           coords;
   PetscInt      c_start, c_end, num_elem;
@@ -270,15 +272,26 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   // ---------------------------------------------------------------------------
   // libCEED bases:Hdiv basis_u and Lagrange basis_x
   // ---------------------------------------------------------------------------
-  ierr = DMGetDimension(dm, &dim); CHKERRQ(ierr);
+  dim = problem_data->dim;
   num_comp_x = dim;
   num_comp_u = 1;   // one vector dof
-  CeedInt       elem_dof = dim*elem_node; // dof per element
+  // Number of quadratures per element
+  CeedInt       num_qpts = PetscPowInt(Q,
+                                       dim);
+  CeedInt       elem_dof = dim*PetscPowInt(P, dim); // dof per element
   CeedScalar    q_ref[dim*num_qpts], q_weights[num_qpts];
   CeedScalar    div[elem_dof*num_qpts], interp[dim*elem_dof*num_qpts];
-  HdivBasisQuad(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
-  CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, elem_dof, num_qpts,
-                      interp, div, q_ref, q_weights, &ceed_data->basis_u);
+
+  if (dim == 2) {
+    HdivBasisQuad(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
+    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, elem_dof, num_qpts,
+                        interp, div, q_ref, q_weights, &ceed_data->basis_u);
+  } else {
+    HdivBasisHex(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
+    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_HEX, num_comp_u, elem_dof, num_qpts,
+                        interp, div, q_ref, q_weights, &ceed_data->basis_u);
+  }
+
   CeedBasisCreateTensorH1Lagrange(ceed, dim, num_comp_x, 2, Q,
                                   problem_data->quadrature_mode, &ceed_data->basis_x);
 
@@ -345,7 +358,6 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
 
   // Setup RHS and true solution
   CeedOperatorApply(op_setup_rhs, x_coord, rhs_ceed, CEED_REQUEST_IMMEDIATE);
-
 
   // ---------------------------------------------------------------------------
   // Persistent libCEED vectors
@@ -435,7 +447,7 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                        CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
 
   CeedOperatorApply(op_true, x_coord, true_ceed, CEED_REQUEST_IMMEDIATE);
-
+  //CeedVectorView(true_ceed, "%12.8f", stdout);
   // -- Multiplicity calculation
   CeedVector mult_vec;
   CeedScalar *true_array;
