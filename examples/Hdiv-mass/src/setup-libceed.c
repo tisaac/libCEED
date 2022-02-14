@@ -213,14 +213,14 @@ PetscErrorCode CreateRestrictionFromPlexOriented(Ceed ceed, DM dm,
     // Get number of faces per element
     ierr = DMPlexGetConeSize(dm, p, &faces_per_elem); CHKERRQ(ierr);
     dofs_per_face = faces_per_elem - 2;
-    for (PetscInt e = 0; e < faces_per_elem; e++) {
+    for (PetscInt f = 0; f < faces_per_elem; f++) {
       for (PetscInt i = 0; i < dofs_per_face; i++) {
-        PetscInt ii = dofs_per_face*e + i;
+        PetscInt ii = dofs_per_face*f + i;
         // Essential boundary conditions are encoded as -(loc+1), but we don't care so we decode.
         PetscInt loc = Involute(indices[ii*num_comp[0]]);
         restr_indices[elem_offset] = loc;
         // Set orientation
-        orient_indices[elem_offset] = ornt[e] < 0;
+        orient_indices[elem_offset] = ornt[f] < 0;
         elem_offset++;
       }
     }
@@ -276,19 +276,18 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   num_comp_x = dim;
   num_comp_u = 1;   // one vector dof
   // Number of quadratures per element
-  CeedInt       num_qpts = PetscPowInt(Q,
-                                       dim);
-  CeedInt       elem_dof = dim*PetscPowInt(P, dim); // dof per element
+  CeedInt       num_qpts = PetscPowInt(Q, dim);
+  CeedInt       P_u = dim*PetscPowInt(P, dim); // dof per element
   CeedScalar    q_ref[dim*num_qpts], q_weights[num_qpts];
-  CeedScalar    div[elem_dof*num_qpts], interp[dim*elem_dof*num_qpts];
+  CeedScalar    div[P_u*num_qpts], interp[dim*P_u*num_qpts];
 
   if (dim == 2) {
     HdivBasisQuad(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
-    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, elem_dof, num_qpts,
+    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_QUAD, num_comp_u, P_u, num_qpts,
                         interp, div, q_ref, q_weights, &ceed_data->basis_u);
   } else {
     HdivBasisHex(Q, q_ref, q_weights, interp, div, problem_data->quadrature_mode);
-    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_HEX, num_comp_u, elem_dof, num_qpts,
+    CeedBasisCreateHdiv(ceed, CEED_TOPOLOGY_HEX, num_comp_u, P_u, num_qpts,
                         interp, div, q_ref, q_weights, &ceed_data->basis_u);
   }
 

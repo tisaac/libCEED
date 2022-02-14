@@ -22,10 +22,9 @@
 #include "../qfunctions/mixed-poisson-rhs2d.h"
 #include "../qfunctions/mixed-poisson2d.h"
 #include "../qfunctions/mixed-poisson-error2d.h"
-#include "../qfunctions/mixed-poisson-true2d.h"
 
-// Hdiv_POISSON_MASS2D is registered in cl-option.c
-PetscErrorCode Hdiv_POISSON_MASS2D(ProblemData *problem_data, void *ctx) {
+// Hdiv_POISSON_MIXED2D is registered in cl-option.c
+PetscErrorCode Hdiv_POISSON_MIXED2D(ProblemData *problem_data, void *ctx) {
   User              user = *(User *)ctx;
   MPI_Comm          comm = PETSC_COMM_WORLD;
   PetscInt          ierr;
@@ -36,6 +35,7 @@ PetscErrorCode Hdiv_POISSON_MASS2D(ProblemData *problem_data, void *ctx) {
   // ------------------------------------------------------
   //               SET UP POISSON_QUAD2D
   // ------------------------------------------------------
+  problem_data->dim                     = 2;
   problem_data->elem_node               = 4;
   problem_data->quadrature_mode         = CEED_GAUSS;
   problem_data->setup_rhs               = SetupRhs2D;
@@ -44,8 +44,6 @@ PetscErrorCode Hdiv_POISSON_MASS2D(ProblemData *problem_data, void *ctx) {
   problem_data->residual_loc            = SetupMixedPoisson2D_loc;
   problem_data->setup_error             = SetupError2D;
   problem_data->setup_error_loc         = SetupError2D_loc;
-  problem_data->setup_true              = SetupTrueSoln2D;
-  problem_data->setup_true_loc          = SetupTrueSoln2D_loc;
   // ------------------------------------------------------
   //              Command line Options
   // ------------------------------------------------------

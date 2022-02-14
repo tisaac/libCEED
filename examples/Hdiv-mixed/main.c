@@ -75,8 +75,8 @@ int main(int argc, char **argv) {
     PetscErrorCode (*p)(ProblemData *, void *);
     ierr = PetscFunctionListFind(app_ctx->problems, app_ctx->problem_name, &p);
     CHKERRQ(ierr);
-    if (!p) SETERRQ1(PETSC_COMM_SELF, 1, "Problem '%s' not found",
-                       app_ctx->problem_name);
+    if (!p) SETERRQ(PETSC_COMM_SELF, 1, "Problem '%s' not found",
+                      app_ctx->problem_name);
     ierr = (*p)(problem_data, &user); CHKERRQ(ierr);
   }
 
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   // PETSc objects
   DM             dm;
   VecType        vec_type;
-  ierr = CreateDistributedDM(comm, &dm); CHKERRQ(ierr);
+  ierr = CreateDistributedDM(comm, problem_data, &dm); CHKERRQ(ierr);
   ierr = DMGetVecType(dm, &vec_type); CHKERRQ(ierr);
   if (!vec_type) { // Not yet set by user -dm_vec_type
     switch (mem_type_backend) {
@@ -138,6 +138,7 @@ int main(int argc, char **argv) {
   CeedVectorSetArray(rhs_ceed, MemTypeP2C(mem_type), CEED_USE_POINTER, r);
 
   // Get projected true solution
+  /*
   Vec true_loc;
   PetscScalar *t;
   CeedVector true_ceed;
@@ -147,13 +148,13 @@ int main(int argc, char **argv) {
   ierr = VecGetArrayAndMemType(true_loc, &t, &t_mem_type); CHKERRQ(ierr);
   CeedVectorCreate(ceed, U_l_size, &true_ceed);
   CeedVectorSetArray(true_ceed, MemTypeP2C(t_mem_type), CEED_USE_POINTER, t);
+  */
   // ---------------------------------------------------------------------------
   // Setup libCEED
   // ---------------------------------------------------------------------------
   // -- Set up libCEED objects
   ierr = SetupLibceed(dm, ceed, app_ctx, problem_data, U_g_size,
-                      U_loc_size, ceed_data, rhs_ceed, &target,
-                      true_ceed); CHKERRQ(ierr);
+                      U_loc_size, ceed_data, rhs_ceed, &target); CHKERRQ(ierr);
   //CeedVectorView(rhs_ceed, "%12.8f", stdout);
   // ---------------------------------------------------------------------------
   // Gather RHS
@@ -198,13 +199,6 @@ int main(int argc, char **argv) {
   CeedScalar l2_error_u, l2_error_p;
   ierr = ComputeError(user, U_g, target,
                       &l2_error_u, &l2_error_p); CHKERRQ(ierr);
-
-  // ---------------------------------------------------------------------------
-  // Compute L2 error of projected solution into H(div) space
-  // ---------------------------------------------------------------------------
-  CeedScalar l2_proj_u, l2_proj_p;
-  ierr = ComputeErrorProj(user, U_g, true_ceed,
-                          &l2_proj_u, &l2_proj_p); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Output results
@@ -253,7 +247,6 @@ int main(int argc, char **argv) {
   ierr = PetscFree(phys_ctx); CHKERRQ(ierr);
 
   // Free libCEED objects
-  CeedVectorDestroy(&true_ceed);
   CeedVectorDestroy(&rhs_ceed);
   CeedVectorDestroy(&target);
   ierr = CeedDataDestroy(ceed_data); CHKERRQ(ierr);

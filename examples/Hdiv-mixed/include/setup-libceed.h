@@ -20,6 +20,5 @@ PetscErrorCode CreateRestrictionFromPlexOriented(Ceed ceed, DM dm, CeedInt P,
 PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
                             ProblemData *problem_data, PetscInt U_g_size,
                             PetscInt U_loc_size, CeedData ceed_data,
-                            CeedVector rhs_ceed, CeedVector *target,
-                            CeedVector true_ceed);
+                            CeedVector rhs_ceed, CeedVector *target);
 #endif // setuplibceed_h

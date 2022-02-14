@@ -24,6 +24,8 @@
 //    0---------1
 //     b0     b1
 // Bx[0-->7] = b0_x-->b7_x, By[0-->7] = b0_y-->b7_y
+// To see how the nodal basis is constructed visit:
+// https://github.com/rezgarshakeri/H-div-Tests
 int NodalHdivBasisQuad(CeedScalar *x, CeedScalar *Bx, CeedScalar *By) {
 
   Bx[0] = 0.125*x[0]*x[0] - 0.125 ;

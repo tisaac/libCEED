@@ -3,26 +3,36 @@
 // ---------------------------------------------------------------------------
 // Set-up DM
 // ---------------------------------------------------------------------------
-PetscErrorCode CreateDistributedDM(MPI_Comm comm, DM *dm) {
+PetscErrorCode CreateDistributedDM(MPI_Comm comm, ProblemData *problem_data,
+                                   DM *dm) {
   PetscErrorCode  ierr;
   PetscSection   sec;
   PetscBool      interpolate = PETSC_TRUE;
-  PetscInt       nx = 2, ny = 2;
-  PetscInt       faces[2] = {nx, ny};
-  PetscInt       dim, dofs_per_face;
+  PetscInt       dofs_per_face;
   PetscInt       p_start, p_end;
   PetscInt       c_start, c_end; // cells
   PetscInt       f_start, f_end; // faces
   PetscInt       v_start, v_end; // vertices
+  PetscInt       dim = problem_data->dim, nx = 1, ny = 1, nz = 1;
 
   PetscFunctionBeginUser;
 
-  ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces",
-                                 faces, &dim, NULL); CHKERRQ(ierr);
+  if (dim == 2) {
+    PetscInt       faces[2] = {nx, ny};
+    ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces",
+                                   faces, &dim, NULL); CHKERRQ(ierr);
+    if (!dim) dim = problem_data->dim;
+    ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, faces, NULL,
+                               NULL, NULL, interpolate, dm); CHKERRQ(ierr);
+  } else {
+    PetscInt       faces[3] = {nx, ny, nz};
+    ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces",
+                                   faces, &dim, NULL); CHKERRQ(ierr);
+    if (!dim) dim = problem_data->dim;
+    ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, faces, NULL,
+                               NULL, NULL, interpolate, dm); CHKERRQ(ierr);
+  }
 
-  if (!dim) dim = 2;
-  ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, faces, NULL,
-                             NULL, NULL, interpolate, dm); CHKERRQ(ierr);
   // Get plex limits
   ierr = DMPlexGetChart(*dm, &p_start, &p_end); CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(*dm, 0, &c_start, &c_end); CHKERRQ(ierr);

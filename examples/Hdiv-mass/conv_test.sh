@@ -19,10 +19,10 @@
 declare -A run_flags
     run_flags[pc_type]=svd
     run_flags[problem]=mass3d
-    run_flags[dm_plex_box_faces]=2,2,2
+    run_flags[dm_plex_box_faces]=1,1,1
 
 declare -A test_flags
-    test_flags[res_start]=2
+    test_flags[res_start]=1
     test_flags[res_stride]=1
     test_flags[res_end]=5
 
