@@ -19,6 +19,7 @@
 declare -A run_flags
     run_flags[pc_type]=svd
     run_flags[problem]=mixed_poisson3d
+    run_flags[dm_plex_dim]=3
     run_flags[dm_plex_box_faces]=2,2,2
 
 declare -A test_flags

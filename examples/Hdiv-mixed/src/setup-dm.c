@@ -7,31 +7,22 @@ PetscErrorCode CreateDistributedDM(MPI_Comm comm, ProblemData *problem_data,
                                    DM *dm) {
   PetscErrorCode  ierr;
   PetscSection   sec;
-  PetscBool      interpolate = PETSC_TRUE;
   PetscInt       dofs_per_face;
   PetscInt       p_start, p_end;
   PetscInt       c_start, c_end; // cells
   PetscInt       f_start, f_end; // faces
   PetscInt       v_start, v_end; // vertices
-  PetscInt       dim = problem_data->dim, nx = 1, ny = 1, nz = 1;
 
   PetscFunctionBeginUser;
 
-  if (dim == 2) {
-    PetscInt       faces[2] = {nx, ny};
-    ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces",
-                                   faces, &dim, NULL); CHKERRQ(ierr);
-    if (!dim) dim = problem_data->dim;
-    ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, faces, NULL,
-                               NULL, NULL, interpolate, dm); CHKERRQ(ierr);
-  } else {
-    PetscInt       faces[3] = {nx, ny, nz};
-    ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces",
-                                   faces, &dim, NULL); CHKERRQ(ierr);
-    if (!dim) dim = problem_data->dim;
-    ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, faces, NULL,
-                               NULL, NULL, interpolate, dm); CHKERRQ(ierr);
-  }
+  // Create DMPLEX
+  ierr = DMCreate(comm, dm); CHKERRQ(ierr);
+  ierr = DMSetType(*dm, DMPLEX); CHKERRQ(ierr);
+  // Set Tensor elements
+  ierr = PetscOptionsSetValue(NULL, "-dm_plex_simplex", "0"); CHKERRQ(ierr);
+  // Set CL options
+  ierr = DMSetFromOptions(*dm); CHKERRQ(ierr);
+  ierr = DMViewFromOptions(*dm, NULL, "-dm_view"); CHKERRQ(ierr);
 
   // Get plex limits
   ierr = DMPlexGetChart(*dm, &p_start, &p_end); CHKERRQ(ierr);
@@ -59,7 +50,6 @@ PetscErrorCode CreateDistributedDM(MPI_Comm comm, ProblemData *problem_data,
   }
   ierr = PetscSectionSetUp(sec); CHKERRQ(ierr);
   ierr = DMSetSection(*dm,sec); CHKERRQ(ierr);
-  ierr = DMViewFromOptions(*dm, NULL, "-dm_view"); CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&sec); CHKERRQ(ierr);
 
   PetscFunctionReturn(0);

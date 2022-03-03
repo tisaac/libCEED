@@ -23,8 +23,7 @@
 //
 // Build with: make
 // Run with:
-//          ./main
-//          ./main pc_type svd
+//     ./main -pc_type svd -problem mixed_poisson3d -dm_plex_dim 3 -dm_plex_box_faces 4,4,4
 const char help[] = "Solve H(div)-mixed problem using PETSc and libCEED\n";
 
 #include "main.h"
@@ -221,6 +220,16 @@ int main(int argc, char **argv) {
                      ksp_type, KSPConvergedReasons[reason], its,
                      (double)rnorm, (double)l2_error_u,
                      (double)l2_error_p); CHKERRQ(ierr);
+
+  // ---------------------------------------------------------------------------
+  // Save solution (paraview)
+  // ---------------------------------------------------------------------------
+  PetscViewer viewer;
+
+  ierr = PetscViewerVTKOpen(comm,"solution.vtu",FILE_MODE_WRITE,&viewer);
+  CHKERRQ(ierr);
+  ierr = VecView(U_g, viewer); CHKERRQ(ierr);
+  ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
 
   // ---------------------------------------------------------------------------
   // Free objects
