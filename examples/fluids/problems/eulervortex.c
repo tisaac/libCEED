@@ -213,9 +213,3 @@ PetscErrorCode PRINT_EULER_VORTEX(Physics phys, SetupContext setup_ctx,
 
   PetscFunctionReturn(0);
 }
-
-// Problem Register
-PetscErrorCode ProblemRegister_EulerVortex(AppCtx app_ctx) {
-  return PetscFunctionListAdd(&app_ctx->problems, "euler_vortex",
-                              NS_EULER_VORTEX);
-}
