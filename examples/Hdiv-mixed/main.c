@@ -23,7 +23,9 @@
 //
 // Build with: make
 // Run with:
-//     ./main -pc_type svd -problem mixed_poisson3d -dm_plex_dim 3 -dm_plex_box_faces 4,4,4
+//     ./main -pc_type svd -problem darcy2d -dm_plex_dim 2 -dm_plex_box_faces 4,4
+//     ./main -pc_type svd -problem darcy3d -dm_plex_dim 3 -dm_plex_box_faces 4,4,4
+//     ./main -pc_type svd -problem darcy3d -dm_plex_filename /path to the mesh file
 const char help[] = "Solve H(div)-mixed problem using PETSc and libCEED\n";
 
 #include "main.h"
@@ -252,7 +254,8 @@ int main(int argc, char **argv) {
   ierr = PetscFree(app_ctx); CHKERRQ(ierr);
   ierr = PetscFree(problem_data); CHKERRQ(ierr);
   ierr = PetscFree(user); CHKERRQ(ierr);
-  ierr = PetscFree(phys_ctx->pq2d_ctx); CHKERRQ(ierr);
+  ierr = PetscFree(phys_ctx->darcy2d_ctx); CHKERRQ(ierr);
+  ierr = PetscFree(phys_ctx->darcy3d_ctx); CHKERRQ(ierr);
   ierr = PetscFree(phys_ctx); CHKERRQ(ierr);
 
   // Free libCEED objects

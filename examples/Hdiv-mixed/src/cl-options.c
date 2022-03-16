@@ -25,13 +25,13 @@ PetscErrorCode RegisterProblems_Hdiv(AppCtx app_ctx) {
   app_ctx->problems = NULL;
   PetscErrorCode   ierr;
   PetscFunctionBeginUser;
-  // 1) poisson-quad2d (Hdiv_POISSON_MIXED2D is created in mixed-poisson2d.c)
-  ierr = PetscFunctionListAdd(&app_ctx->problems, "mixed_poisson2d",
-                              Hdiv_POISSON_MIXED2D); CHKERRQ(ierr);
-  // 2) poisson-hex3d
-  ierr = PetscFunctionListAdd(&app_ctx->problems, "mixed_poisson3d",
-                              Hdiv_POISSON_MIXED3D); CHKERRQ(ierr);
-  // 3) poisson-prism3d
+  // 1) darcy2d (Hdiv_DARCY2D is created in darcy2d.c)
+  ierr = PetscFunctionListAdd(&app_ctx->problems, "darcy2d",
+                              Hdiv_DARCY2D); CHKERRQ(ierr);
+  // 2) darcy3d (Hdiv_DARCY3D is created in dacry3d.c)
+  ierr = PetscFunctionListAdd(&app_ctx->problems, "darcy3d",
+                              Hdiv_DARCY3D); CHKERRQ(ierr);
+  // 3) darcy3d-prism
 
   // 4) richard
 
@@ -64,7 +64,7 @@ PetscErrorCode ProcessCommandLineOptions(MPI_Comm comm, AppCtx app_ctx) {
 
   // Provide default problem if not specified
   if (!problem_flag) {
-    const char *problem_name = "mixed_poisson2d";
+    const char *problem_name = "darcy2d";
     strncpy(app_ctx->problem_name, problem_name, 16);
   }
 

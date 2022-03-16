@@ -15,35 +15,35 @@
 // testbed platforms, in support of the nation's exascale computing imperative.
 
 /// @file
-/// Utility functions for setting up MIXED_POISSON problem
+/// Utility functions for setting up Darcy problem in 2D
 
 #include "../include/setup-libceed.h"
 #include "../include/problems.h"
-#include "../qfunctions/mixed-poisson-rhs3d.h"
-#include "../qfunctions/mixed-poisson3d.h"
-#include "../qfunctions/mixed-poisson-error3d.h"
+#include "../qfunctions/darcy-rhs2d.h"
+#include "../qfunctions/darcy-mass2d.h"
+#include "../qfunctions/darcy-error2d.h"
 
-// Hdiv_POISSON_MIXED3D is registered in cl-option.c
-PetscErrorCode Hdiv_POISSON_MIXED3D(ProblemData *problem_data, void *ctx) {
+// Hdiv_DARCY2D is registered in cl-option.c
+PetscErrorCode Hdiv_DARCY2D(ProblemData *problem_data, void *ctx) {
   User              user = *(User *)ctx;
   MPI_Comm          comm = PETSC_COMM_WORLD;
   PetscInt          ierr;
   PetscFunctionBeginUser;
 
-  ierr = PetscCalloc1(1, &user->phys->ph3d_ctx); CHKERRQ(ierr);
+  ierr = PetscCalloc1(1, &user->phys->darcy2d_ctx); CHKERRQ(ierr);
 
   // ------------------------------------------------------
   //               SET UP POISSON_QUAD2D
   // ------------------------------------------------------
-  problem_data->dim                     = 3;
-  problem_data->elem_node               = 8;
+  problem_data->dim                     = 2;
+  problem_data->elem_node               = 4;
   problem_data->quadrature_mode         = CEED_GAUSS;
-  problem_data->setup_rhs               = SetupRhs3D;
-  problem_data->setup_rhs_loc           = SetupRhs3D_loc;
-  problem_data->residual                = SetupMixedPoisson3D;
-  problem_data->residual_loc            = SetupMixedPoisson3D_loc;
-  problem_data->setup_error             = SetupError3D;
-  problem_data->setup_error_loc         = SetupError3D_loc;
+  problem_data->setup_rhs               = SetupDarcyRhs2D;
+  problem_data->setup_rhs_loc           = SetupDarcyRhs2D_loc;
+  problem_data->residual                = SetupDarcyMass2D;
+  problem_data->residual_loc            = SetupDarcyMass2D_loc;
+  problem_data->setup_error             = SetupDarcyError2D;
+  problem_data->setup_error_loc         = SetupDarcyError2D_loc;
   // ------------------------------------------------------
   //              Command line Options
   // ------------------------------------------------------

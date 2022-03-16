@@ -67,7 +67,7 @@ PetscErrorCode ComputeError(User user, Vec X, CeedVector target,
   PetscScalar *x;
   PetscMemType mem_type;
   CeedVector collocated_error;
-  CeedInt length;
+  CeedSize length;
 
   PetscFunctionBeginUser;
   CeedVectorGetLength(target, &length);

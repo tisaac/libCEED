@@ -27,32 +27,31 @@ struct CeedData_ {
   CeedQFunctionContext pq2d_context;
 };
 
-// 1) poisson-quad2d
-#ifndef PHYSICS_POISSONQUAD2D_STRUCT
-#define PHYSICS_POISSONQUAD2D_STRUCT
-typedef struct PQ2DContext_ *PQ2DContext;
-struct PQ2DContext_ {
+// 1) darcy2d
+#ifndef PHYSICS_DARCY2D_STRUCT
+#define PHYSICS_DARCY2D_STRUCT
+typedef struct DARCY2DContext_ *DARCY2DContext;
+struct DARCY2DContext_ {
   CeedScalar kappa;
 };
 #endif
 
-// 2) poisson-hex3d
-#ifndef PHYSICS_POISSONHEX3D_STRUCT
-#define PHYSICS_POISSONHEX3D_STRUCT
-typedef struct PH3DContext_ *PH3DContext;
-struct PH3DContext_ {
+// 2) darcy3d
+#ifndef PHYSICS_DARCY3D_STRUCT
+#define PHYSICS_DARCY3D_STRUCT
+typedef struct DARCY3DContext_ *DARCY3DContext;
+struct DARCY3DContext_ {
   CeedScalar kappa;
 };
 #endif
-// 3) poisson-prism3d
 
 // 4) richard
 
 // Struct that contains all enums and structs used for the physics of all problems
 typedef struct Physics_ *Physics;
 struct Physics_ {
-  PQ2DContext            pq2d_ctx;
-  PH3DContext            ph3d_ctx;
+  DARCY2DContext            darcy2d_ctx;
+  DARCY3DContext            darcy3d_ctx;
 };
 
 // PETSc user data

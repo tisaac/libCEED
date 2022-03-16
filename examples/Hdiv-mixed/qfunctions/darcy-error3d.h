@@ -17,8 +17,8 @@
 /// @file
 /// Compute pointwise error of the H(div) example using PETSc
 
-#ifndef ERROR3D_H
-#define ERROR3D_H
+#ifndef DARCY_ERROR3D_H
+#define DARCY_ERROR3D_H
 
 #include <math.h>
 
@@ -41,9 +41,9 @@ CEED_QFUNCTION_HELPER CeedScalar ComputeDetMat(const CeedScalar A[3][3]) {
 // -----------------------------------------------------------------------------
 // Compuet error
 // -----------------------------------------------------------------------------
-CEED_QFUNCTION(SetupError3D)(void *ctx, const CeedInt Q,
-                             const CeedScalar *const *in,
-                             CeedScalar *const *out) {
+CEED_QFUNCTION(SetupDarcyError3D)(void *ctx, const CeedInt Q,
+                                  const CeedScalar *const *in,
+                                  CeedScalar *const *out) {
   // *INDENT-OFF*
   // Inputs
   const CeedScalar (*w) = in[0], 
@@ -79,4 +79,4 @@ CEED_QFUNCTION(SetupError3D)(void *ctx, const CeedInt Q,
 }
 // -----------------------------------------------------------------------------
 
-#endif // End ERROR3D_H
+#endif // End DARCY_ERROR3D_H

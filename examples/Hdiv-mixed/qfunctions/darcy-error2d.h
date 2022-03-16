@@ -17,17 +17,17 @@
 /// @file
 /// Compute pointwise error of the H(div) example using PETSc
 
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef DARCY_ERROR_H
+#define DARCY_ERROR_H
 
 #include <math.h>
 
 // -----------------------------------------------------------------------------
 // Compuet error
 // -----------------------------------------------------------------------------
-CEED_QFUNCTION(SetupError2D)(void *ctx, const CeedInt Q,
-                             const CeedScalar *const *in,
-                             CeedScalar *const *out) {
+CEED_QFUNCTION(SetupDarcyError2D)(void *ctx, const CeedInt Q,
+                                  const CeedScalar *const *in,
+                                  CeedScalar *const *out) {
   // *INDENT-OFF*
   // Inputs
   const CeedScalar (*w) = in[0], 
@@ -61,4 +61,4 @@ CEED_QFUNCTION(SetupError2D)(void *ctx, const CeedInt Q,
 }
 // -----------------------------------------------------------------------------
 
-#endif // End ERROR_H
+#endif // End DARCY_ERROR_H
