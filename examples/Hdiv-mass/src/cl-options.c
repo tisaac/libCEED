@@ -46,9 +46,8 @@ PetscErrorCode ProcessCommandLineOptions(MPI_Comm comm, AppCtx app_ctx) {
   PetscErrorCode ierr;
   PetscFunctionBeginUser;
 
-  ierr = PetscOptionsBegin(comm, NULL,
-                           "H(div) examples in PETSc with libCEED",
-                           NULL); CHKERRQ(ierr);
+  PetscOptionsBegin(comm, NULL,
+                    "H(div) examples in PETSc with libCEED", NULL);
 
   ierr = PetscOptionsFList("-problem", "Problem to solve", NULL,
                            app_ctx->problems,
@@ -69,7 +68,7 @@ PetscErrorCode ProcessCommandLineOptions(MPI_Comm comm, AppCtx app_ctx) {
     strncpy(app_ctx->problem_name, problem_name, 16);
   }
 
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }

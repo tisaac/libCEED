@@ -71,9 +71,8 @@ struct User_ {
 
 // Problem specific data
 typedef struct {
-  CeedQFunctionUser setup_rhs, residual, setup_error, setup_true;
-  const char        *setup_rhs_loc, *residual_loc, *setup_error_loc,
-        *setup_true_loc;
+  CeedQFunctionUser setup_rhs, residual, setup_error;
+  const char        *setup_rhs_loc, *residual_loc, *setup_error_loc;
   CeedQuadMode      quadrature_mode;
   CeedInt           elem_node, dim;
   PetscErrorCode    (*setup_ctx)(Ceed, CeedData, Physics);

@@ -22,6 +22,7 @@
 #include "../qfunctions/darcy-rhs3d.h"
 #include "../qfunctions/darcy-mass3d.h"
 #include "../qfunctions/darcy-error3d.h"
+#include "../qfunctions/face-geo3d.h"
 
 // Hdiv_DARCY3D is registered in cl-option.c
 PetscErrorCode Hdiv_DARCY3D(ProblemData *problem_data, void *ctx) {
@@ -37,6 +38,7 @@ PetscErrorCode Hdiv_DARCY3D(ProblemData *problem_data, void *ctx) {
   // ------------------------------------------------------
   problem_data->dim                     = 3;
   problem_data->elem_node               = 8;
+  problem_data->q_data_size_face        = 4;
   problem_data->quadrature_mode         = CEED_GAUSS;
   problem_data->setup_rhs               = SetupDarcyRhs3D;
   problem_data->setup_rhs_loc           = SetupDarcyRhs3D_loc;
@@ -44,13 +46,14 @@ PetscErrorCode Hdiv_DARCY3D(ProblemData *problem_data, void *ctx) {
   problem_data->residual_loc            = SetupDarcyMass3D_loc;
   problem_data->setup_error             = SetupDarcyError3D;
   problem_data->setup_error_loc         = SetupDarcyError3D_loc;
+  problem_data->setup_face_geo          = SetupFaceGeo3D;
+  problem_data->setup_face_geo_loc      = SetupFaceGeo3D_loc;
   // ------------------------------------------------------
   //              Command line Options
   // ------------------------------------------------------
-  ierr = PetscOptionsBegin(comm, NULL, "Options for Hdiv-mixed problem",
-                           NULL); CHKERRQ(ierr);
+  PetscOptionsBegin(comm, NULL, "Options for Hdiv-mixed problem", NULL);
 
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }

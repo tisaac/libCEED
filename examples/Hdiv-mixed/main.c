@@ -138,18 +138,6 @@ int main(int argc, char **argv) {
   CeedVectorCreate(ceed, U_l_size, &rhs_ceed);
   CeedVectorSetArray(rhs_ceed, MemTypeP2C(mem_type), CEED_USE_POINTER, r);
 
-  // Get projected true solution
-  /*
-  Vec true_loc;
-  PetscScalar *t;
-  CeedVector true_ceed;
-  PetscMemType t_mem_type;
-  ierr = VecDuplicate(U_loc, &true_loc); CHKERRQ(ierr);
-  ierr = VecZeroEntries(true_loc); CHKERRQ(ierr);
-  ierr = VecGetArrayAndMemType(true_loc, &t, &t_mem_type); CHKERRQ(ierr);
-  CeedVectorCreate(ceed, U_l_size, &true_ceed);
-  CeedVectorSetArray(true_ceed, MemTypeP2C(t_mem_type), CEED_USE_POINTER, t);
-  */
   // ---------------------------------------------------------------------------
   // Setup libCEED
   // ---------------------------------------------------------------------------
@@ -195,7 +183,7 @@ int main(int argc, char **argv) {
   ierr = KSPSolve(ksp, rhs, U_g); CHKERRQ(ierr);
   //VecView(U_g, PETSC_VIEWER_STDOUT_WORLD);
   // ---------------------------------------------------------------------------
-  // Compute pointwise L2 maximum error
+  // Compute pointwise L2 error
   // ---------------------------------------------------------------------------
   CeedScalar l2_error_u, l2_error_p;
   ierr = ComputeError(user, U_g, target,
@@ -216,7 +204,7 @@ int main(int argc, char **argv) {
                      "  KSP:\n"
                      "    KSP Type                  : %s\n"
                      "    KSP Convergence           : %s\n"
-                     "    Total KSP Iterations      : %D\n"
+                     "    Total KSP Iterations      : %" PetscInt_FMT "\n"
                      "    Final rnorm               : %e\n"
                      "    L2 Error of u and p       : %e, %e\n",
                      ksp_type, KSPConvergedReasons[reason], its,

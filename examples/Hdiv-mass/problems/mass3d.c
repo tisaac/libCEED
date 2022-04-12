@@ -22,7 +22,6 @@
 #include "../qfunctions/poisson-rhs3d.h"
 #include "../qfunctions/poisson-mass3d.h"
 #include "../qfunctions/poisson-error3d.h"
-#include "../qfunctions/poisson-true3d.h"
 
 // Hdiv_POISSON_MASS2D is registered in cl-option.c
 PetscErrorCode Hdiv_POISSON_MASS3D(ProblemData *problem_data, void *ctx) {
@@ -45,16 +44,13 @@ PetscErrorCode Hdiv_POISSON_MASS3D(ProblemData *problem_data, void *ctx) {
   problem_data->residual_loc            = SetupMass3D_loc;
   problem_data->setup_error             = SetupError3D;
   problem_data->setup_error_loc         = SetupError3D_loc;
-  problem_data->setup_true              = SetupTrueSoln3D;
-  problem_data->setup_true_loc          = SetupTrueSoln3D_loc;
 
   // ------------------------------------------------------
   //              Command line Options
   // ------------------------------------------------------
-  ierr = PetscOptionsBegin(comm, NULL, "Options for Hdiv-mass problem",
-                           NULL); CHKERRQ(ierr);
+  PetscOptionsBegin(comm, NULL, "Options for Hdiv-mass problem", NULL);
 
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }

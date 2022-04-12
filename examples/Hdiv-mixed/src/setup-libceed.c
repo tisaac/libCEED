@@ -125,10 +125,11 @@ PetscErrorCode CreateRestrictionFromPlexOriented(Ceed ceed, DM dm,
                                        &num_indices, &indices, NULL, NULL);
     CHKERRQ(ierr);
   }
-  if (elem_offset != num_elem*dim*PetscPowInt(P, dim))
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB,
-            "ElemRestriction of size (%D,%D) initialized %D nodes", num_elem,
-            dim*PetscPowInt(P, dim),elem_offset);
+  //if (elem_offset != num_elem*dim*PetscPowInt(P, dim))
+  //  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB,
+  //          "ElemRestriction of size (%" PetscInt_FMT ", %" PetscInt_FMT" )
+  //          initialized %" PetscInt_FMT " nodes", num_elem,
+  //          dim*PetscPowInt(P, dim),elem_offset);
 
   ierr = DMGetLocalVector(dm, &U_loc); CHKERRQ(ierr);
   ierr = VecGetLocalSize(U_loc, &num_dof); CHKERRQ(ierr);
@@ -342,41 +343,68 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   ceed_data->qf_error = qf_error;
   ceed_data->op_error = op_error;
 
-  /*
   // ---------------------------------------------------------------------------
-  // Setup True Qfunction: True solution projected to H(div) space
+  // Traction boundary conditions, if needed
   // ---------------------------------------------------------------------------
-  CeedBasis basis_true;
-  CeedBasisCreateTensorH1Lagrange(ceed, dim, num_comp_x, 2, 2,
-                                  CEED_GAUSS_LOBATTO, &basis_true);
-  CeedQFunction qf_true;
-  CeedOperator  op_true;
-  // Create the q-function that sets up the true solution in H(div) space
-  CeedQFunctionCreateInterior(ceed, 1, problem_data->setup_true,
-                              problem_data->setup_true_loc, &qf_true);
-  CeedQFunctionAddInput(qf_true, "x", num_comp_x, CEED_EVAL_INTERP);
-  CeedQFunctionAddInput(qf_true, "dx", dim*dim, CEED_EVAL_GRAD);
-  CeedQFunctionAddOutput(qf_true, "true_u", dim, CEED_EVAL_NONE);
-  //CeedQFunctionAddOutput(qf_true, "true_p", 1, CEED_EVAL_NONE);
 
-  // Create the operator that builds the true solution in H(div) space
-  CeedOperatorCreate(ceed, qf_true, CEED_QFUNCTION_NONE, CEED_QFUNCTION_NONE,
-                     &op_true);
-  CeedOperatorSetField(op_true, "x", ceed_data->elem_restr_x,
-                       basis_true, CEED_VECTOR_ACTIVE);
-  CeedOperatorSetField(op_true, "dx", ceed_data->elem_restr_x,
-                       basis_true, x_coord);
-  CeedOperatorSetField(op_true, "true_u", ceed_data->elem_restr_u,
+  // --- Setup
+  ierr = DMGetLabel(dm, "Face Sets", &domain_label); CHKERRQ(ierr);
+
+  // -- Basis
+  CeedInt loc_num_elem_face, num_qpts_face,
+          q_data_size_face = problem_data->q_data_size_face;
+  CeedBasis basis_x_face;
+  height = 1;
+  CeedBasisCreateTensorH1Lagrange(ceed, dim - height, num_comp_x, 2, Q,
+                                  problem_data->quadrature_mode, &basis_x_face);
+  // ---- CEED Restriction
+  CeedElemRestriction elem_restr_x_face, elem_restr_qd_i_face;
+  num_qpts_face = CeedIntPow(Q, dim - height);
+  ierr = CreateRestrictionFromPlex(ceed, dm_coord, height, domain_label, 4,
+                                   &elem_restr_x_face); CHKERRQ(ierr);
+
+  CeedElemRestrictionGetNumElements(elem_restr_x_face, &loc_num_elem_face);
+  CeedElemRestrictionCreateStrided(ceed, loc_num_elem_face, num_qpts_face,
+                                   q_data_size_face,
+                                   q_data_size_face*loc_num_elem_face*num_qpts_face,
+                                   CEED_STRIDES_BACKEND, &elem_restr_qd_i_face);
+  //printf("%d\n", loc_num_elem_face);
+  //CeedElemRestrictionView(elem_restr_x_face, stdout);
+  // ---- CEED Vector
+  CeedVector          q_data_face;
+  CeedVectorCreate(ceed, q_data_size_face*loc_num_elem_face*num_qpts_face,
+                   &q_data_face);
+  // -- QFunction
+  CeedQFunction qf_setup_face_geo;
+  CeedQFunctionCreateInterior(ceed, 1, problem_data->setup_face_geo,
+                              problem_data->setup_face_geo_loc, &qf_setup_face_geo);
+  CeedQFunctionAddInput(qf_setup_face_geo, "dx", num_comp_x*(dim-height),
+                        CEED_EVAL_GRAD);
+  CeedQFunctionAddInput(qf_setup_face_geo, "weight", 1, CEED_EVAL_WEIGHT);
+  CeedQFunctionAddOutput(qf_setup_face_geo, "qdata face", q_data_size_face,
+                         CEED_EVAL_NONE);
+  // -- Operator
+  CeedOperator op_setup_face_geo;
+  CeedOperatorCreate(ceed, qf_setup_face_geo, CEED_QFUNCTION_NONE,
+                     CEED_QFUNCTION_NONE, &op_setup_face_geo);
+  CeedOperatorSetField(op_setup_face_geo, "dx", elem_restr_x_face,
+                       basis_x_face, CEED_VECTOR_ACTIVE);
+  CeedOperatorSetField(op_setup_face_geo, "weight", CEED_ELEMRESTRICTION_NONE,
+                       basis_x_face, CEED_VECTOR_NONE);
+  CeedOperatorSetField(op_setup_face_geo, "qdata face", elem_restr_qd_i_face,
                        CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
-  //CeedOperatorSetField(op_true, "true_p", ceed_data->elem_restr_p,
-  //                     CEED_BASIS_COLLOCATED, CEED_VECTOR_ACTIVE);
-  CeedOperatorApply(op_true, x_coord, true_ceed, CEED_REQUEST_IMMEDIATE);
+  // -- Compute the quadrature data
+  CeedOperatorApply(op_setup_face_geo, x_coord, q_data_face,
+                    CEED_REQUEST_IMMEDIATE);
 
-  // Cleanup
-  CeedBasisDestroy(&basis_true);
-  CeedQFunctionDestroy(&qf_true);
-  CeedOperatorDestroy(&op_true);
-  */
+  // -- Cleanup
+  CeedBasisDestroy(&basis_x_face);
+  CeedVectorDestroy(&q_data_face);
+  CeedElemRestrictionDestroy(&elem_restr_x_face);
+  CeedElemRestrictionDestroy(&elem_restr_qd_i_face);
+  CeedQFunctionDestroy(&qf_setup_face_geo);
+  CeedOperatorDestroy(&op_setup_face_geo);
+
   CeedQFunctionDestroy(&qf_setup_rhs);
   CeedOperatorDestroy(&op_setup_rhs);
   CeedVectorDestroy(&x_coord);

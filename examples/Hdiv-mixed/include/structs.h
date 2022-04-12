@@ -7,12 +7,17 @@
 // Application context from user command line options
 typedef struct AppCtx_ *AppCtx;
 struct AppCtx_ {
-  // libCEED arguments
+  // Degree of polynomial (1 only), extra quadrature pts
   PetscInt          degree;
   PetscInt          q_extra;
+  // For applying traction BCs
+  PetscInt          bc_traction_count;
+  PetscInt          bc_traction_faces[16];
+  PetscScalar       bc_traction_vector[16][3];
   // Problem type arguments
   PetscFunctionList problems;
   char              problem_name[PETSC_MAX_PATH_LEN];
+
 };
 
 // libCEED data struct
@@ -70,11 +75,12 @@ struct User_ {
 
 // Problem specific data
 typedef struct {
-  CeedQFunctionUser setup_rhs, residual, setup_error, setup_true;
+  CeedQFunctionUser setup_rhs, residual, setup_error, setup_true,
+                    setup_face_geo;
   const char        *setup_rhs_loc, *residual_loc, *setup_error_loc,
-        *setup_true_loc;
+        *setup_true_loc, *setup_face_geo_loc;
   CeedQuadMode      quadrature_mode;
-  CeedInt           elem_node, dim;
+  CeedInt           elem_node, dim, q_data_size_face;
   PetscErrorCode    (*setup_ctx)(Ceed, CeedData, Physics);
 
 } ProblemData;

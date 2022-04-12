@@ -18,11 +18,15 @@
 
 declare -A run_flags
     run_flags[pc_type]=svd
-    run_flags[problem]=mass3d
-    run_flags[dm_plex_box_faces]=1,1,1
+    #run_flags[problem]=mass3d
+    #run_flags[dm_plex_dim]=3
+    #run_flags[dm_plex_box_faces]=1,1,1
+    run_flags[problem]=mass2d
+    run_flags[dm_plex_dim]=2
+    run_flags[dm_plex_box_faces]=2,2
 
 declare -A test_flags
-    test_flags[res_start]=1
+    test_flags[res_start]=2
     test_flags[res_stride]=1
     test_flags[res_end]=5
 
@@ -33,7 +37,7 @@ echo "run,mesh_res,error_u" > $file_name
 i=0
 
 for ((res=${test_flags[res_start]}; res<=${test_flags[res_end]}; res+=${test_flags[res_stride]})); do
-    run_flags[dm_plex_box_faces]=$res,$res,$res
+    run_flags[dm_plex_box_faces]=$res,$res
     args=''
     for arg in "${!run_flags[@]}"; do
         if ! [[ -z ${run_flags[$arg]} ]]; then
