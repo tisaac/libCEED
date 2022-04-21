@@ -56,7 +56,7 @@ PetscErrorCode ProcessCommandLineOptions(MPI_Comm comm, AppCtx app_ctx) {
   ierr = PetscOptionsInt("-degree", "Polynomial degree of finite elements",
                          NULL, app_ctx->degree, &app_ctx->degree, NULL); CHKERRQ(ierr);
 
-  app_ctx->q_extra = 3;
+  app_ctx->q_extra = 0;
   ierr = PetscOptionsInt("-q_extra", "Number of extra quadrature points",
                          NULL, app_ctx->q_extra, &app_ctx->q_extra, NULL); CHKERRQ(ierr);
 
