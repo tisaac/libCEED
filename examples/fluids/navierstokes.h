@@ -389,9 +389,8 @@ extern PetscErrorCode NS_ADVECTION(ProblemData *problem, DM dm, void *setup_ctx,
 extern PetscErrorCode NS_ADVECTION2D(ProblemData *problem, DM dm,
                                      void *setup_ctx, void *ctx);
 extern PetscErrorCode CreateSTGContext(MPI_Comm comm,
-                                       STGShur14Context *pstg_ctx, 
-                                       NewtonianIdealGasContext newt_ctx, bool implicit,
-                                       CeedScalar theta0);
+                                       STGShur14Context *pstg_ctx, NewtonianIdealGasContext newt_ctx,
+                                       bool implicit, CeedScalar theta0);
 
 // Set up context for each problem
 extern PetscErrorCode SetupContext_CHANNEL(Ceed ceed, CeedData ceed_data,
