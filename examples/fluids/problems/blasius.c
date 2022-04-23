@@ -10,6 +10,7 @@
 
 #include "../navierstokes.h"
 #include "../qfunctions/blasius.h"
+#include "../qfunctions/stg_shur14.h"
 
 #ifndef blasius_context_struct
 #define blasius_context_struct
@@ -98,19 +99,9 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   ierr = NS_NEWTONIAN_IG(problem, dm, setup_ctx, ctx); CHKERRQ(ierr);
   User              user = *(User *)ctx;
   MPI_Comm          comm = PETSC_COMM_WORLD;
+  PetscBool    stg_bool      = PETSC_FALSE;
   PetscFunctionBeginUser;
   ierr = PetscCalloc1(1, &user->phys->blasius_ctx); CHKERRQ(ierr);
-
-  // ------------------------------------------------------
-  //               SET UP Blasius
-  // ------------------------------------------------------
-  problem->ics                     = ICsBlasius;
-  problem->ics_loc                 = ICsBlasius_loc;
-  problem->apply_inflow            = Blasius_Inflow;
-  problem->apply_inflow_loc        = Blasius_Inflow_loc;
-  problem->apply_outflow           = Blasius_Outflow;
-  problem->apply_outflow_loc       = Blasius_Outflow_loc;
-  problem->setup_ctx               = SetupContext_BLASIUS;
 
   // CeedScalar mu = .04; // Pa s, dynamic viscosity
   CeedScalar mu            = 1.8e-5;   // Pa s, dynamic viscosity
@@ -146,7 +137,27 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   ierr = PetscOptionsScalar("-top_angle",
                             "Geometric top_angle rate of boundary layer mesh",
                             NULL, top_angle, &top_angle, NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-stg", "Use STG inflow boundary condition",
+                          NULL, stg_bool, &stg_bool, NULL); CHKERRQ(ierr);
   PetscOptionsEnd();
+
+  // ------------------------------------------------------
+  //               SET UP Blasius
+  // ------------------------------------------------------
+  problem->ics               = ICsBlasius;
+  problem->ics_loc           = ICsBlasius_loc;
+  problem->apply_outflow     = Blasius_Outflow;
+  problem->apply_outflow_loc = Blasius_Outflow_loc;
+  problem->setup_ctx         = SetupContext_BLASIUS;
+
+  if (!stg_bool) {
+    problem->apply_inflow     = Blasius_Inflow;
+    problem->apply_inflow_loc = Blasius_Inflow_loc;
+  } else {
+    problem->apply_inflow     = STGShur14_Inflow;
+    problem->apply_inflow_loc = STGShur14_Inflow_loc;
+  }
+
 
   PetscScalar meter           = user->units->meter;
   PetscScalar second          = user->units->second;
@@ -171,6 +182,12 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
 
   user->phys->newtonian_ig_ctx->mu = mu;
   user->phys->blasius_ctx->newtonian_ctx = *user->phys->newtonian_ig_ctx;
+  if (stg_bool) {
+    ierr = CreateSTGContext(comm, &user->phys->stg_shur14_ctx,
+                            user->phys->newtonian_ig_ctx,
+                            user->phys->implicit, theta0);
+    CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -191,7 +208,10 @@ PetscErrorCode SetupContext_BLASIUS(Ceed ceed, CeedData ceed_data,
   phys->has_neumann = PETSC_TRUE;
   if (ceed_data->qf_ics)
     CeedQFunctionSetContext(ceed_data->qf_ics, ceed_data->blasius_context);
-  if (ceed_data->qf_apply_inflow)
+  if (phys->stg_shur14_ctx) {
+    ierr = SetupContext_STGShur14(ceed, ceed_data, app_ctx, setup_ctx, phys);
+    CHKERRQ(ierr);
+  } else if (ceed_data->qf_apply_inflow)
     CeedQFunctionSetContext(ceed_data->qf_apply_inflow, ceed_data->blasius_context);
   if (ceed_data->qf_apply_outflow)
     CeedQFunctionSetContext(ceed_data->qf_apply_outflow,
