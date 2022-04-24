@@ -6,6 +6,7 @@
 #include <petscsys.h>
 #include <ceed.h>
 #include "../include/structs.h"
+#include "../include/boundary.h"
 
 // ---------------------------------------------------------------------------
 // Set-up DM

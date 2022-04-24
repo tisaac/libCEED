@@ -344,6 +344,10 @@ PetscErrorCode SetupLibceed(DM dm, Ceed ceed, AppCtx app_ctx,
   ceed_data->op_error = op_error;
 
   // ---------------------------------------------------------------------------
+  // Dirichlet boundary conditions, if needed
+  // ---------------------------------------------------------------------------
+  //ierr = DMAddBoundariesDirichlet(dm); CHKERRQ(ierr);
+  // ---------------------------------------------------------------------------
   // Traction boundary conditions, if needed
   // ---------------------------------------------------------------------------
 

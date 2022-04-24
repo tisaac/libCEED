@@ -50,6 +50,8 @@ PetscErrorCode CreateDistributedDM(MPI_Comm comm, ProblemData *problem_data,
   }
   ierr = PetscSectionSetUp(sec); CHKERRQ(ierr);
   ierr = DMSetSection(*dm,sec); CHKERRQ(ierr);
+  ierr = DMCreateDS(*dm); CHKERRQ(ierr);
+  ierr = DMAddBoundariesDirichlet(*dm); CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&sec); CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
