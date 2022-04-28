@@ -311,13 +311,14 @@ struct BlasiusContext_ {
  *  CeedScalar (*sigma)[ctx->nmodes] = (CeedScalar (*)[ctx->nmodes])&ctx->data[ctx->offsets.sigma]; */
 typedef struct STGShur14Context_ *STGShur14Context;
 struct STGShur14Context_ {
-  CeedInt    nmodes;   // !< Number of wavemodes
-  CeedInt    nprofs;   // !< Number of profile points in STGInflow.dat
-  CeedScalar alpha;    // !< Geometric growth rate of kappa
-  CeedScalar u0;       // !< Convective velocity
-  CeedScalar time;     // !< Solution time
-  CeedScalar theta0;   // !< Inlet temperature
-  bool       implicit; // !< Whether using implicit time integration
+  CeedInt    nmodes;    // !< Number of wavemodes
+  CeedInt    nprofs;    // !< Number of profile points in STGInflow.dat
+  CeedScalar alpha;     // !< Geometric growth rate of kappa
+  CeedScalar u0;        // !< Convective velocity
+  CeedScalar time;      // !< Solution time
+  CeedScalar theta0;    // !< Inlet temperature
+  bool       implicit;  // !< Whether using implicit time integration
+  bool       mean_only; // !< Only apply the mean profile
   struct NewtonianIdealGasContext_ newtonian_ctx;
 
   struct {
