@@ -173,7 +173,7 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   ierr = modifyMesh(dm, problem->dim, growth, Ndelta, refine_height, top_angle);
   CHKERRQ(ierr);
 
-  user->phys->blasius_ctx->weakT     = !!weakT;
+  user->phys->blasius_ctx->weakT     = weakT;
   user->phys->blasius_ctx->Uinf      = Uinf;
   user->phys->blasius_ctx->delta0    = delta0;
   user->phys->blasius_ctx->theta0    = theta0;
