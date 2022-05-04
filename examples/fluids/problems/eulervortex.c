@@ -32,7 +32,7 @@ PetscErrorCode NS_EULER_VORTEX(ProblemData *problem, DM dm, void *setup_ctx,
   // ------------------------------------------------------
   problem->dim                     = 3;
   problem->q_data_size_vol         = 10;
-  problem->q_data_size_sur         = 4;
+  problem->q_data_size_sur         = 10;
   problem->setup_vol               = Setup;
   problem->setup_vol_loc           = Setup_loc;
   problem->setup_sur               = SetupBoundary;

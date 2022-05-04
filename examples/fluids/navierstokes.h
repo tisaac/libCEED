@@ -319,6 +319,7 @@ struct STGShur14Context_ {
   CeedScalar theta0;    // !< Inlet temperature
   bool       implicit;  // !< Whether using implicit time integration
   bool       mean_only; // !< Only apply the mean profile
+  CeedScalar dx;        // !< dx used for h calculation
   struct NewtonianIdealGasContext_ newtonian_ctx;
 
   struct {
@@ -389,7 +390,7 @@ extern PetscErrorCode NS_ADVECTION(ProblemData *problem, DM dm, void *setup_ctx,
                                    void *ctx);
 extern PetscErrorCode NS_ADVECTION2D(ProblemData *problem, DM dm,
                                      void *setup_ctx, void *ctx);
-extern PetscErrorCode CreateSTGContext(MPI_Comm comm,
+extern PetscErrorCode CreateSTGContext(MPI_Comm comm, DM dm,
                                        STGShur14Context *pstg_ctx, NewtonianIdealGasContext newt_ctx,
                                        bool implicit, CeedScalar theta0);
 

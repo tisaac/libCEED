@@ -183,7 +183,7 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   user->phys->newtonian_ig_ctx->mu = mu;
   user->phys->blasius_ctx->newtonian_ctx = *user->phys->newtonian_ig_ctx;
   if (stg_bool) {
-    ierr = CreateSTGContext(comm, &user->phys->stg_shur14_ctx,
+    ierr = CreateSTGContext(comm, dm, &user->phys->stg_shur14_ctx,
                             user->phys->newtonian_ig_ctx,
                             user->phys->implicit, theta0);
     CHKERRQ(ierr);
