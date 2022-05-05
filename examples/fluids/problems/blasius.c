@@ -30,6 +30,41 @@ struct BlasiusContext_ {
 #define M_PI    3.14159265358979323846
 #endif
 
+PetscErrorCode getYNodeLocs(const MPI_Comm comm,
+                            const char path[PETSC_MAX_PATH_LEN], PetscReal **pnode_locs,
+                            PetscInt *num_node_locs) {
+  PetscErrorCode ierr;
+  PetscInt ndims, dims[2];
+  FILE *fp;
+  const PetscInt char_array_len = 512;
+  char line[char_array_len];
+  char **array;
+  PetscReal *node_locs;
+  PetscFunctionBeginUser;
+
+  ierr = PetscFOpen(comm, path, "r", &fp); CHKERRQ(ierr);
+  ierr = PetscSynchronizedFGets(comm, fp, char_array_len, line); CHKERRQ(ierr);
+  ierr = PetscStrToArray(line, ' ', &ndims, &array); CHKERRQ(ierr);
+
+  for (PetscInt i=0; i<ndims; i++)  dims[i] = atoi(array[i]);
+  if (ndims<2) dims[1] = 1; // Assume 1 column of data is not otherwise specified
+  *num_node_locs = dims[0];
+  ierr = PetscMalloc1(*num_node_locs, &node_locs); CHKERRQ(ierr);
+
+  for (PetscInt i=0; i<dims[0]; i++) {
+    ierr = PetscSynchronizedFGets(comm, fp, char_array_len, line); CHKERRQ(ierr);
+    ierr = PetscStrToArray(line, ' ', &ndims, &array); CHKERRQ(ierr);
+    if(ndims < dims[1]) SETERRQ(comm, -1,
+                                  "Line %d of %s does not contain enough columns (%d instead of %d)", i,
+                                  path, ndims, dims[1]);
+
+    node_locs[i] = (PetscReal) atof(array[0]);
+  }
+  ierr = PetscFClose(comm, fp); CHKERRQ(ierr);
+  *pnode_locs = node_locs;
+  PetscFunctionReturn(0);
+}
+
 /* \brief Modify the domain and mesh for blasius
  *
  * Modifies mesh such that `N` elements are within 1.2*`delta0` with a geometric
@@ -39,8 +74,9 @@ struct BlasiusContext_ {
  * The top surface is also angled downwards, so that it may be used as an
  * outflow. It's angle is controlled by top_angle (in units of degrees).
  */
-PetscErrorCode modifyMesh(DM dm, PetscInt dim, PetscReal growth, PetscInt N,
-                          PetscReal refine_height, PetscReal top_angle) {
+PetscErrorCode modifyMesh(MPI_Comm comm, DM dm, PetscInt dim, PetscReal growth,
+                          PetscInt N, PetscReal refine_height, PetscReal top_angle,
+                          PetscReal node_locs[], PetscInt num_node_locs) {
 
   PetscInt ierr, narr, ncoords;
   PetscReal domain_min[3], domain_max[3], domain_size[3];
@@ -66,23 +102,45 @@ PetscErrorCode modifyMesh(DM dm, PetscInt dim, PetscReal growth, PetscInt N,
   PetscInt nmax = 3, faces[3];
   ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", faces, &nmax,
                                  NULL); CHKERRQ(ierr);
+  // Get element size of the box mesh, for indexing each node
+  const PetscReal dybox = domain_size[1]/faces[1];
 
-  // Calculate the first element height
-  PetscReal dybox = domain_size[1]/faces[1];
-  PetscReal dy1   = refine_height*(growth-1)/(pow(growth, N)-1);
+  if (!node_locs) {
+    // Calculate the first element height
+    PetscReal dy1   = refine_height*(growth-1)/(pow(growth, N)-1);
 
-  // Calculate log of sizing outside BL
-  PetscReal logdy = (log(domain_max[1]) - log(refine_height)) / (faces[1] - N);
+    // Calculate log of sizing outside BL
+    PetscReal logdy = (log(domain_max[1]) - log(refine_height)) / (faces[1] - N);
 
-  for(int i=0; i<ncoords; i++) {
-    PetscInt y_box_index = round(coords[i][1]/dybox);
-    if(y_box_index <= N) {
+    for(int i=0; i<ncoords; i++) {
+      PetscInt y_box_index = round(coords[i][1]/dybox);
+      if(y_box_index <= N) {
+        coords[i][1] = (1 - (coords[i][0]/domain_max[0])*angle_coeff) *
+                       dy1*(pow(growth, coords[i][1]/dybox)-1)/(growth-1);
+      } else {
+        PetscInt j = y_box_index - N;
+        coords[i][1] = (1 - (coords[i][0]/domain_max[0])*angle_coeff) *
+                       exp(log(refine_height) + logdy*j);
+      }
+    }
+  } else {
+    // Error checking
+    if (num_node_locs < faces[1] +1)
+      SETERRQ(comm, -1, "The y_node_locs_path has too few locations; "
+              "There are %d + 1 nodes, but only %d locations given",
+              faces[1]+1, num_node_locs);
+    if (num_node_locs > faces[1] +1) {
+      ierr = PetscPrintf(comm, "WARNING: y_node_locs_path has more locations (%d) "
+                         "than the mesh has nodes (%d). This maybe unintended.",
+                         num_node_locs, faces[1]+1); CHKERRQ(ierr);
+    }
+
+    for(int i=0; i<ncoords; i++) {
+      // Determine which y-node we're at
+      PetscInt y_box_index = round(coords[i][1]/dybox);
+
       coords[i][1] = (1 - (coords[i][0]/domain_max[0])*angle_coeff) *
-                     dy1*(pow(growth, coords[i][1]/dybox)-1)/(growth-1);
-    } else {
-      PetscInt j = y_box_index - N;
-      coords[i][1] = (1 - (coords[i][0]/domain_max[0])*angle_coeff) *
-                     exp(log(refine_height) + logdy*j);
+                     node_locs[y_box_index];
     }
   }
 
@@ -114,6 +172,7 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   CeedScalar theta0        = 288.; // K
   CeedScalar P0            = 1.01e5; // Pa
   PetscBool  weakT         = PETSC_FALSE; // weak density or temperature
+  char y_node_locs_path[PETSC_MAX_PATH_LEN] = "";
 
   PetscOptionsBegin(comm, NULL, "Options for CHANNEL problem", NULL);
   ierr = PetscOptionsBool("-weakT", "Change from rho weak to T weak at inflow",
@@ -139,6 +198,11 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
                             NULL, top_angle, &top_angle, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-stg", "Use STG inflow boundary condition",
                           NULL, stg_bool, &stg_bool, NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsString("-y_node_locs_path",
+                            "Path to file with y node locations. "
+                            "If empty, will use the algorithmic mesh warping.", NULL,
+                            y_node_locs_path, y_node_locs_path,
+                            sizeof(y_node_locs_path), NULL); CHKERRQ(ierr);
   PetscOptionsEnd();
 
   // ------------------------------------------------------
@@ -170,8 +234,15 @@ PetscErrorCode NS_BLASIUS(ProblemData *problem, DM dm, void *setup_ctx,
   Uinf   *= meter / second;
   delta0 *= meter;
 
-  ierr = modifyMesh(dm, problem->dim, growth, Ndelta, refine_height, top_angle);
-  CHKERRQ(ierr);
+  PetscReal *node_locs=NULL;
+  PetscInt num_node_locs=0;
+  if (strcmp(y_node_locs_path, "")) {
+    ierr = getYNodeLocs(comm, y_node_locs_path, &node_locs, &num_node_locs);
+    CHKERRQ(ierr);
+  }
+  ierr = modifyMesh(comm, dm, problem->dim, growth, Ndelta, refine_height,
+                    top_angle, node_locs, num_node_locs); CHKERRQ(ierr);
+  ierr = PetscFree(node_locs); CHKERRQ(ierr);
 
   user->phys->blasius_ctx->weakT     = weakT;
   user->phys->blasius_ctx->Uinf      = Uinf;
